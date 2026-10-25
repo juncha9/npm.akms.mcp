@@ -50,7 +50,7 @@ export async function runMenu(options: MenuOptions): Promise<number> {
                 const state = registry.read();
                 const clients = state.clients;
                 const migration = registry.needsMigration(state);
-                if(migration) prompter.write("Registry update available. Choose Migrate registry to review the changes.\n");
+                if(migration) prompter.write(prompter.paint.warning("Registry update available. Choose Migrate registry to review the changes.\n"));
                 const picked: McpId | "register" | "sync" | "runtime" | "updates" | "migrate" | "quit" = await prompter.select<McpId | "register" | "sync" | "runtime" | "updates" | "migrate" | "quit">("AKMS MCP · Connection setup", [
                     { value: "db", label: "Database", hint: "PostgreSQL connections" },
                     { value: "ssh", label: "SSH", hint: "Remote hosts" },

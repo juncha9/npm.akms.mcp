@@ -48,6 +48,29 @@ akms-mcp sync
 
 Use `--help` for the command reference and `--version` for the launcher's version.
 
+## Upgrading from 0.2.x
+
+For clients with individual npx entries and no shared registry, start the current setup launcher:
+
+```sh
+npx -y --prefer-online @akms/mcp@latest
+```
+
+1. Open **Runtime**, select each MCP kind you use, and choose **Install AKMS runtime** or **Update runtime installation**.
+2. Open **Register**, select your AI services, then choose **Apply registration** and confirm the review. Matching existing connections are imported into the shared catalog, and their individual client entries are replaced by one `akms_<kind>` entry per service.
+3. Answer **Yes** to **Compare existing settings and choose which to share?** when versions differ, even if only their descriptions differ. Select the connection, choose **Use 1** or **Use 2**, keep the shared connection name to replace its old entries, and confirm **Import ... and apply it?**. If you defer this choice, use **Import existing connections** or reopen Register and Apply to return to the comparison.
+4. Run **Sync** if any saved changes remain unfinished.
+5. Restart or reconnect your AI clients to load the new entries. In Codex, start a new thread and archive the old threads whose servers you want to retire: each thread owns its MCP processes, and archiving stopped those processes in the isolated Codex 0.164.0 check.
+6. Call `db_catalog_status`, `ssh_catalog_status`, `wsl_catalog_status` or `s3_catalog_status` for each kind you use and check its loaded and skipped connections. Tools now include the connection prefix, such as `pg_alpha__db_query` or `ssh_dev__ssh_exec`.
+
+**If you registered first:** a missing-runtime result is a normal pending state. Updated setup labels this **Waiting for runtime**. Existing client entries stay in place while the runtime is missing. Install it from **Runtime**, then run **Sync** to finish applying the session entries and removing the old entries; installing the runtime alone does not finish that conversion.
+
+**Finish importing differences:** in 0.3.1, connections still awaiting import did not appear in Sync, even when only their descriptions differed. Finish the Register comparison or use **Import existing connections** to review them. Updated Sync screens show **Not yet imported** and offer **Import existing connections** on the same screen. Complete that import review even when the saved connections are already up to date.
+
+**Existing development registry:** if setup shows **Registry update available**, open **Migrate registry**, review the proposed changes and confirm them. See [Migrate an older registry](#migrate-an-older-registry).
+
+**Return to individual entries:** open **Runtime**, select the kind, choose **Switch back to per-connection entries**, then review and confirm. This restores the saved individual launch commands and credentials and removes the session entry after the replacements are verified; the registry stays version 2. Restart or reconnect clients after changing the layout.
+
 ## Shared registration
 
 ### Startup checks and updates

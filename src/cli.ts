@@ -1,25 +1,28 @@
 #!/usr/bin/env node
 import { parseArguments } from "./modules/launcher/arguments";
-import { runMenu } from "./modules/launcher/menu";
+import { runMenu, runRegistrationCommand } from "./modules/launcher/menu";
 import { launchMcp } from "./modules/launcher/npm";
 
 declare const __PACKAGE_VERSION__: string;
 
 const HELP_TEXT = [
-    "AKMS MCP — connection setup for Database, SSH and WSL",
+    "AKMS MCP — connection setup for Database, SSH, WSL and S3",
     "",
     "Usage:",
     "  akms-mcp                          Open the setup menu",
     "  akms-mcp [setup|config]            Open the same menu",
-    "  akms-mcp [setup|config] <mcp>      Open db, ssh or wsl setup directly",
+    "  akms-mcp [setup|config] <mcp>      Open db, ssh, wsl or s3 setup directly",
+    "  akms-mcp register                  Register AI services for all AKMS connections",
+    "  akms-mcp sync                      Review differences and retry pending changes",
     "",
     "Options:",
     "  --target <client>                 claude-code | codex | claude-desktop | cursor",
     "  -h, --help                        Print this help",
     "  -v, --version                     Print the launcher version",
     "",
-    "Each launch checks npm for the selected package's latest release.",
+    "Opens the installed runtime's setup. Missing runtimes can be installed with confirmation.",
     "Node.js 22+ and npm are required. WSL setup runs on Windows.",
+    "Catalog: ~/.akms/mcp/registry.json (or $AKMS_MCP_HOME/registry.json) stores settings and passwords in plaintext.",
 ].join("\n");
 
 async function main(): Promise<void> {
@@ -38,6 +41,10 @@ async function main(): Promise<void> {
     }
     if(argumentsList.mcpId != null) {
         process.exitCode = await launchMcp({ mcpId: argumentsList.mcpId, targetId: argumentsList.targetId });
+        return;
+    }
+    if(argumentsList.managementMode) {
+        process.exitCode = await runRegistrationCommand({ input: process.stdin, output: process.stdout, mode: argumentsList.managementMode, targetId: argumentsList.targetId });
         return;
     }
     process.exitCode = await runMenu({

@@ -1,10 +1,24 @@
 import { PassThrough } from "node:stream";
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Registry } from "../src/modules/registration/registry";
+import { createJsonFileTarget } from "../src/modules/registration/targets/json-file";
 import type { LaunchOptions } from "../src/_types";
 import { runMenu } from "../src/modules/launcher/menu";
 import { displayWidth, Prompter, PromptClosedError } from "../src/modules/launcher/prompter";
 
+const updates = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("../src/modules/registration/menu", async (original) => ({ ...await original<typeof import("../src/modules/registration/menu")>(), updatesMenu: updates }));
+
 const ESC = "\u001b";
+let directory: string;
+beforeEach(() => {
+    directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-launcher-menu-"));
+    vi.stubEnv("AKMS_MCP_HOME", directory);
+});
+afterEach(() => { updates.mockClear(); vi.unstubAllEnvs(); fs.rmSync(directory, { recursive: true, force: true }); });
 
 function createTerminal(columns = 80) {
     const rawModes: boolean[] = [];
@@ -93,12 +107,35 @@ describe("selection UI inherited from the MCP packages", () => {
 });
 
 describe("unified menu", () => {
-    it("keeps the selected client and gives each setup exclusive stdin ownership", async () => {
+    it.each([false, true])("offers registry migration in the launcher with approval=%s", async approved => {
+        const file = path.join(directory, "registry.json"), original = JSON.stringify({ version: 2, clients: [], connections: {}, sessions: {} });
+        fs.writeFileSync(file, original);
+        const input = new PassThrough(), output = new PassThrough(); let text = "";
+        output.on("data", chunk => text += chunk); input.end(`migrate\n${approved ? "y" : ""}\nquit\n`);
+        const launch = vi.fn(async () => 0);
+        expect(await runMenu({ input, output, registryPath: file, targets: [], launch })).toBe(0);
+        expect(text).toContain("Registry update available"); expect(text).toContain("Migrate registry and apply these changes? (y/N)"); expect(launch).not.toHaveBeenCalled();
+        if(approved) { expect(JSON.parse(fs.readFileSync(file, "utf8")).defaultMode).toBe("catalog"); expect(fs.readFileSync(path.join(directory, "registry.previous.json"), "utf8")).toBe(original); }
+        else expect(fs.readFileSync(file, "utf8")).toBe(original);
+    });
+    it("opens the shared Updates screen and returns to the menu", async () => {
+        const terminal = createTerminal();
+        const launch = vi.fn(async () => 0);
+        const menu = runMenu({ input: terminal.input, output: terminal.output, targets: [], launch });
+        await press(terminal.input, "8", "\r", ESC);
+        expect(await menu).toBe(0);
+        expect(updates).toHaveBeenCalledOnce();
+        expect(launch).not.toHaveBeenCalled();
+        expect(terminal.screen()).toContain("Updates");
+    });
+    it("persists multiple registered services and gives each setup exclusive stdin ownership", async () => {
         const terminal = createTerminal();
         const launches: LaunchOptions[] = [];
+        const targets = ["cursor", "codex"].map((id) => createJsonFileTarget({ id: id as "cursor" | "codex", label: id, filePath: path.join(directory, id + ".json") }));
         const menu = runMenu({
             input: terminal.input,
             output: terminal.output,
+            targets,
             launch: async (options) => {
                 expect(terminal.input.listenerCount("data")).toBe(0);
                 expect(terminal.input.listenerCount("end")).toBe(0);
@@ -107,12 +144,13 @@ describe("unified menu", () => {
                 return 0;
             },
         });
-        await press(terminal.input, "4", "\r", "3", "\r", "1", "\r", "2", "\r", ESC);
+        await press(terminal.input, "5", "\r", "1", "\r", "2", "\r", "3", "\r", "y", "\r", "\r", "1", "\r", "2", "\r", ESC);
         expect(await menu).toBe(0);
         expect(launches.map(({ mcpId, targetId }) => ({ mcpId, targetId }))).toEqual([
-            { mcpId: "db", targetId: "codex" },
-            { mcpId: "ssh", targetId: "codex" },
+            { mcpId: "db", targetId: undefined },
+            { mcpId: "ssh", targetId: undefined },
         ]);
+        expect(new Registry(targets).read().clients).toEqual(["cursor", "codex"]);
     });
 
     it("returns to the menu after failure and retains the existing client on Esc", async () => {
@@ -121,12 +159,13 @@ describe("unified menu", () => {
             input: terminal.input,
             output: terminal.output,
             targetId: "cursor",
+            targets: [createJsonFileTarget({ id: "cursor", label: "Cursor", filePath: path.join(directory, "cursor.json") })],
             launch: async (options) => {
                 expect(options.targetId).toBe("cursor");
                 throw new Error("Registry unavailable");
             },
         });
-        await press(terminal.input, "4", "\r", ESC, "1", "\r", ESC);
+        await press(terminal.input, "5", "\r", ESC, "1", "\r", "\r", ESC);
         expect(await menu).toBe(0);
         expect(terminal.screen()).toContain("Registry unavailable");
     });

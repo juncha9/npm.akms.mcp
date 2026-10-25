@@ -31,7 +31,12 @@ export function parseArguments(argv: string[]): CliArguments {
             commandSeen = true;
             continue;
         }
-        if(Object.hasOwn(MCP_PACKAGES, argument) == true && parsed.mcpId == null) {
+        if((argument === "register" || argument === "sync") && !commandSeen && !parsed.mcpId) {
+            commandSeen = true;
+            parsed.managementMode = argument;
+            continue;
+        }
+        if(Object.hasOwn(MCP_PACKAGES, argument) == true && parsed.mcpId == null && !parsed.managementMode) {
             parsed.mcpId = argument as McpId;
             continue;
         }

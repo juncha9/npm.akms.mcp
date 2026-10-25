@@ -1,8 +1,14 @@
 {
     "name": "@akms/mcp",
-    "version": "0.1.0",
-    "description": "Interactive launcher for configuring the latest AKMS database, SSH and WSL MCP servers.",
-    "keywords": ["mcp", "model-context-protocol", "cli", "setup", "akms"],
+    "version": "0.2.1",
+    "description": "Interactive launcher for configuring installed AKMS database, SSH, WSL and S3 MCP runtimes.",
+    "keywords": [
+        "mcp",
+        "model-context-protocol",
+        "cli",
+        "setup",
+        "akms"
+    ],
     "license": "MIT",
     "type": "module",
     "bin": {
@@ -15,6 +21,7 @@
         "access": "public"
     },
     "scripts": {
+        "prepublishOnly": "node scripts/release-guard.mjs",
         "build": "tsc --noEmit && tsup",
         "dev": "tsx src/cli.ts",
         "start": "node lib/cli.js",
@@ -28,5 +35,8 @@
         "tsx": "^4.23.15",
         "typescript": "^5.9.3",
         "vitest": "^4.1.11"
+    },
+    "dependencies": {
+        "smol-toml": "1.9.1"
     }
 }

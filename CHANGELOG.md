@@ -2,6 +2,59 @@
 
 All notable changes to `@akms/mcp`.
 
+## [0.3.0] - 2026-10-26
+
+- Detect older registry formats in standalone config and the helper menu. Add reviewed, ordered migrations with default-No approval, script APIs, complete pre-migration backup, rollback preservation and post-apply startup checks. Runtime can change the default for future kinds without changing existing modes.
+
+- Start new registries in version 2 session mode. Register/Add/Import create per-kind bundles automatically; missing runtimes keep imported legacy entries until installation and Sync. Existing v1 migration and v2 per-kind rollback choices are preserved.
+
+- Add session servers (default for new catalogs, opt-in migration for existing version 1 catalogs): one direct-Node `akms_<kind>` entry per client session, connection-prefixed tools, registry version 2, reviewed migration and rollback, and startup tool coverage checks.
+- Preserve one atomic `registry.previous.json` revision per catalog-changing operation; keep externally edited client entries for Sync and retain old entries until replacements are verified.
+- Validate connection-name budgets; document credential location and recovery in session mode. Show runtime paths in startup failures, accept string protocol versions, and explain file-lock update failures.
+
+- Open installed runtime setup directly without npm; offer missing-runtime installation and an explicit default-No npm setup fallback after installation failure. Connect the shared Updates screen in the main menu.
+- Block publication on dirty Git trees, reused release versions, mismatched server versions, registration drift, or WSL dependencies missing AKMS registry protection; document the SSH-first package order.
+
+- Check MCP startup after saves, runtime conversion and Updates; add an on-demand Updates screen and default registration removal to No.
+
+- Document plaintext catalog credentials, platform permissions, transfer-guard limits and recovery; show one privacy notice during Register review and a catalog notice in --help.
+- Keep custom-command edits and host-key saves independent of the managed runtime; continue with a still-usable installed runtime after an update failure.
+
+- Install managed server runtimes under `<AKMS_MCP_HOME or ~/.akms/mcp>/runtime`, independent of Node versions. Convert existing npx and global paths through Runtime; preserve development links.
+- Offer older-runtime updates before Add/Edit and check installation before host-key saves. Include the last npm error lines without ANSI controls, and recognize Unix npm JavaScript paths while skipping version-manager shims.
+
+- Add Runtime management for dedicated MCP runtime installation, explicit latest updates and reviewed conversion of existing npx entries to direct Node launches. Standalone packages remain independent.
+
+- Clarify Sync choices with numbered AKMS/service versions, highlighted differences, wrapped values, and explicit apply destinations.
+
+- Separate terminal menu, comparison and result screens; wait for acknowledgement before returning, while keeping piped commands unchanged.
+
+- Keep all configuration menus visible; Add requires at least one registered AI service.
+- Summarize registration/sync results, show only differing fields during review, and distinguish pending imports from shared settings conflicts.
+
+- Replace the temporary Client selector with persistent Register and Sync screens shared by the standalone MCP packages. Registration works locally without launching or installing a child package.
+- Keep this package optional: each child implements its own registration, catalog management and all-service writes.
+
+## 0.2.1 — 2026-10-19
+
+### Documentation
+
+- Document the launcher's minimum setup and the required connection values and prerequisites for each MCP server.
+
+## 0.2.0 — 2026-10-19
+
+### Changed
+
+- Align the package and CLI version with the 0.2.0 MCP release family. Database, SSH, WSL and S3 routing continues to resolve each package's published `latest` version.
+- Check the built CLI version against the package manifest in tests.
+
+## 0.1.1 — Unreleased
+
+### Added
+
+- S3 setup in the main menu and direct `akms-mcp s3 --target <client>` routing to `@akms/mcp-s3`.
+- S3 command routing and built CLI integration tests; updated help and setup documentation.
+
 ## 0.1.0 — Unreleased
 
 ### Added

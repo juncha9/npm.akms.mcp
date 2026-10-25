@@ -14,4 +14,5 @@ export interface CliArguments {
     showVersion: boolean;
     mcpId?: McpId;
     targetId?: ClientId;
+    managementMode?: "register" | "sync";
 }

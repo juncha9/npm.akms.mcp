@@ -4,8 +4,11 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, delimiter, dirname, join } from "node:path";
 import { promisify } from "node:util";
+import type { Readable, Writable } from "node:stream";
 import { MCP_PACKAGES } from "../../_defs";
 import type { LaunchOptions } from "../../_types";
+import { findGlobalRuntime, installGlobalRuntime } from "../registration/runtime";
+import { Prompter, PromptBackError, PromptClosedError } from "./prompter";
 
 const execFileAsync = promisify(execFile);
 
@@ -16,6 +19,7 @@ export async function findNpmCli(): Promise<string> {
         candidates.push(join(dirname(npmExecPath), "npm-cli.js"));
     }
     candidates.push(join(dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js"));
+    candidates.push(join(dirname(process.execPath), "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"));
     for(const directory of (process.env.PATH ?? "").split(delimiter)) {
         if(directory === "") {
             continue;
@@ -30,7 +34,7 @@ export async function findNpmCli(): Promise<string> {
     for(const candidate of candidates) {
         if(existsSync(candidate) == true) {
             const resolved = await realpath(candidate);
-            return resolved;
+            if(resolved.endsWith(".js")) return resolved;
         }
     }
     throw new Error("npm could not be found. Install Node.js with npm, then reopen your terminal.");
@@ -61,13 +65,62 @@ export async function resolveLatestVersion(options: {
     }
 }
 
-export async function launchMcp(options: LaunchOptions): Promise<number> {
+export interface LaunchDependencies {
+    findRuntime?: typeof findGlobalRuntime;
+    installRuntime?: typeof installGlobalRuntime;
+    findNpmCli?: typeof findNpmCli;
+    resolveLatestVersion?: typeof resolveLatestVersion;
+    runChild?: (command: string, argumentsList: string[], pendingInput?: string) => Promise<number>;
+    input?: Readable;
+    output?: Writable;
+}
+
+export async function launchMcp(options: LaunchOptions, dependencies: LaunchDependencies = {}): Promise<number> {
     const selected = MCP_PACKAGES[options.mcpId];
     if(options.mcpId === "wsl" && process.platform !== "win32") {
         throw new Error("WSL setup must run from Windows.");
     }
 
-    const npmCli = await findNpmCli();
+    const findRuntime = dependencies.findRuntime ?? findGlobalRuntime;
+    const output = dependencies.output ?? process.stdout;
+    let runtime = findRuntime(options.mcpId);
+    let pendingInput = options.pendingInput;
+    if(!runtime) {
+        const prompter = new Prompter(dependencies.input ?? process.stdin, output, pendingInput);
+        try {
+            prompter.write(`\n${selected.packageName} is not installed in the AKMS runtime directory.\n`);
+            if(!await prompter.askYesNo("Install the AKMS runtime before opening setup?", true)) return 0;
+            try {
+                prompter.write(`Installing ${selected.packageName}...\n`);
+                await (dependencies.installRuntime ?? installGlobalRuntime)(options.mcpId);
+                runtime = findRuntime(options.mcpId);
+                if(!runtime) throw new Error("Installation completed but the AKMS runtime could not be found.");
+            } catch(error) {
+                if(error instanceof Error && error.message === "AKMS runtime installation cancelled.") return 130;
+                prompter.write(`${error instanceof Error ? error.message : "AKMS runtime installation failed."}\n`);
+                if(!await prompter.askYesNo("Open the latest setup with npm exec instead?", false)) return 1;
+            }
+        } catch(error) {
+            if(error instanceof PromptClosedError || error instanceof PromptBackError) return 0;
+            throw error;
+        } finally {
+            prompter.close();
+            pendingInput = prompter.takePendingInput();
+        }
+    }
+    if(runtime) {
+        const argumentsList = [...runtime.args, selected.setupCommand];
+        if(options.targetId) argumentsList.push("--target", options.targetId);
+        output.write(`Opening ${selected.packageName} ${runtime.version}${runtime.linked ? " (linked development checkout)" : ""}\n\n`);
+        return (dependencies.runChild ?? runChild)(runtime.command, argumentsList, pendingInput);
+    }
+    return launchLatestSetup(options, dependencies, pendingInput);
+}
+
+async function launchLatestSetup(options: LaunchOptions, dependencies: LaunchDependencies, pendingInput?: string): Promise<number> {
+    const selected = MCP_PACKAGES[options.mcpId];
+    const output = dependencies.output ?? process.stdout;
+    const npmCli = await (dependencies.findNpmCli ?? findNpmCli)();
     const cancellation = new AbortController();
     const cancelLookup = (): void => {
         cancellation.abort();
@@ -76,8 +129,8 @@ export async function launchMcp(options: LaunchOptions): Promise<number> {
     process.on("SIGTERM", cancelLookup);
     let version: string;
     try {
-        process.stdout.write(`\nChecking the latest ${selected.packageName} release...\n`);
-        version = await resolveLatestVersion({ npmCli: npmCli, packageName: selected.packageName, signal: cancellation.signal });
+        output.write(`\nChecking the latest ${selected.packageName} release...\n`);
+        version = await (dependencies.resolveLatestVersion ?? resolveLatestVersion)({ npmCli: npmCli, packageName: selected.packageName, signal: cancellation.signal });
     }
     catch(error) {
         if(cancellation.signal.aborted == true) {
@@ -97,15 +150,18 @@ export async function launchMcp(options: LaunchOptions): Promise<number> {
     if(options.targetId != null) {
         argumentsList.push("--target", options.targetId);
     }
-    process.stdout.write(`Opening ${selected.packageName} ${version}\n\n`);
+    output.write(`Opening ${selected.packageName} ${version} with npm exec\n\n`);
+    return (dependencies.runChild ?? runChild)(process.execPath, argumentsList, pendingInput);
+}
 
+async function runChild(command: string, argumentsList: string[], pendingInput?: string): Promise<number> {
     return new Promise<number>((resolve, reject) => {
         const interactiveInput = process.stdin.isTTY === true;
         let inputMode: "inherit" | "pipe" = "pipe";
         if(interactiveInput == true) {
             inputMode = "inherit";
         }
-        const child = spawn(process.execPath, argumentsList, {
+        const child = spawn(command, argumentsList, {
             stdio: [inputMode, "inherit", "inherit"],
             windowsHide: true,
         });
@@ -124,8 +180,8 @@ export async function launchMcp(options: LaunchOptions): Promise<number> {
                     reject(error);
                 }
             });
-            if(options.pendingInput != null) {
-                child.stdin.write(options.pendingInput);
+            if(pendingInput != null) {
+                child.stdin.write(pendingInput);
             }
             process.stdin.pipe(child.stdin);
         }

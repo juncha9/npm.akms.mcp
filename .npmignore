@@ -11,6 +11,7 @@ node_modules/
 
 [Ss]rc/
 [Tt]ests/
+[Ss]cripts/
 [Cc]overage/
 [Ll]ogs/
 *.log

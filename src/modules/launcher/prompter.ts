@@ -242,7 +242,7 @@ export class Prompter {
     private readonly style: Style;
     private readonly symbols: { question: string; pointer: string; tick: string; rule: string };
 
-    constructor(private readonly input: Readable, private readonly output: Writable) {
+    constructor(private readonly input: Readable, private readonly output: Writable, initialInput = "") {
         const ttyInput = input as TtyInput;
         const ttyOutput = output as TtyOutput;
         this.interactive = ttyInput.isTTY == true && ttyInput.setRawMode != null && ttyOutput.isTTY == true;
@@ -259,6 +259,7 @@ export class Prompter {
         input.setEncoding("utf8");
         input.on("data", this.onInputData);
         input.on("end", this.onInputEnd);
+        if(initialInput) this.onData(initialInput);
     }
 
     /** Stops reading so the process can exit once the command is done. */
@@ -277,6 +278,78 @@ export class Prompter {
         this.pendingLines.length = 0;
         this.lineBuffer = "";
         return text;
+    }
+
+    get paint(): Style { return this.style; }
+
+    /** Available content columns, leaving room for the terminal cursor. */
+    get width(): number { return this.columns() - 1; }
+
+    /** Start a fresh terminal page without erasing scrollback or emitting ANSI to pipes. */
+    clearScreen(): void {
+        if(this.interactive) this.output.write(`${ESC}[2J${ESC}[H`);
+    }
+
+    /** Keep results visible before navigating; Esc acknowledges them like Enter. */
+    async acknowledge(): Promise<void> {
+        try { await this.pause(); }
+        catch(error) { if(!(error instanceof PromptBackError)) throw error; }
+    }
+
+    async pause(): Promise<void> {
+        if(this.interactive) await this.readText("Press Enter to continue ");
+    }
+
+    write(text: string): void { this.output.write(text); }
+
+    async askRequired(question: string, defaultValue?: string): Promise<string> {
+        for(;;) {
+            const answer = (await this.readText(`${question}${defaultValue ? ` (${defaultValue})` : ""}: `)).trim() || defaultValue;
+            if(answer) return answer;
+            this.write("  A value is required.\n");
+        }
+    }
+
+    async askYesNo(question: string, defaultValue: boolean): Promise<boolean> {
+        for(;;) {
+            const answer = (await this.readText(`${question} (${defaultValue ? "Y/n" : "y/N"}): `)).trim().toLowerCase();
+            if(!answer) return defaultValue;
+            if(answer === "y" || answer === "yes") return true;
+            if(answer === "n" || answer === "no") return false;
+            this.write("  Enter y or n.\n");
+        }
+    }
+
+    private async readText(prompt: string): Promise<string> {
+        this.input.resume();
+        this.output.write(prompt);
+        if(!this.interactive) {
+            const line = await this.readLine();
+            if(line == null) throw new PromptClosedError();
+            if(line === "ESC" || line === ESC) throw new PromptBackError();
+            return line;
+        }
+        if(this.inputEnded) throw new PromptClosedError();
+        (this.input as TtyInput).setRawMode?.(true);
+        this.output.write(`${ESC}[?25h`);
+        return new Promise((resolve, reject) => {
+            let text = "";
+            const finish = (error?: Error) => {
+                this.keyHandler = null;
+                (this.input as TtyInput).setRawMode?.(false);
+                this.output.write("\n");
+                if(error) reject(error); else resolve(text);
+            };
+            this.keyHandler = (key) => {
+                if(key === KEY_CTRL_C || key === KEY_CTRL_D) return finish(new PromptClosedError());
+                if(key === ESC) return finish(new PromptBackError());
+                if(key === "\r" || key === "\n") return finish();
+                if(key === "\b" || key === "\u007f") text = Array.from(text).slice(0, -1).join("");
+                else if(key === "\u0015") text = "";
+                else if(!/[\x00-\x1f\x7f]/.test(key)) text += key;
+                this.output.write(`\r${ESC}[K${prompt}${text}`);
+            };
+        });
     }
 
     /**

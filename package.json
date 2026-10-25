@@ -1,6 +1,6 @@
 {
     "name": "@akms/mcp",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "description": "Interactive launcher for configuring installed AKMS database, SSH, WSL and S3 MCP runtimes.",
     "keywords": [
         "mcp",

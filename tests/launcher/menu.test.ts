@@ -10,7 +10,7 @@ import { runMenu } from "@/modules/launcher/menu";
 import { displayWidth, Prompter, PromptClosedError } from "@/modules/launcher/prompter";
 import { PACKAGE_VERSION } from "@/_defs";
 
-const runtimeScreen = vi.hoisted(() => vi.fn(async () => {}));
+const runtimeScreen = vi.hoisted(() => vi.fn(async (_prompter?: unknown, _registry?: unknown) => {}));
 vi.mock("@/modules/registration/runtime-menu", async (original) => ({ ...await original<typeof import("@/modules/registration/runtime-menu")>(), runtimeMenu: runtimeScreen }));
 
 const ESC = "\u001b";
@@ -108,14 +108,18 @@ describe("selection UI inherited from the MCP packages", () => {
 });
 
 describe("unified menu", () => {
-    it.each([false, true])("offers registry migration in the launcher with approval=%s", async approved => {
+    it.each([false, true])("offers registry migration inside Runtime, not in the main menu, with approval=%s", async approved => {
+        const actual = await vi.importActual<typeof import("@/modules/registration/runtime-menu")>("@/modules/registration/runtime-menu");
+        runtimeScreen.mockImplementationOnce((prompter, registry) => actual.runtimeMenu(prompter as never, registry as never));
         const file = path.join(directory, "registry.json"), original = JSON.stringify({ version: 2, clients: [], connections: {}, sessions: {} });
         fs.writeFileSync(file, original);
         const input = new PassThrough(), output = new PassThrough(); let text = "";
-        output.on("data", chunk => text += chunk); input.end(`migrate\n${approved ? "y" : ""}\nquit\n`);
+        output.on("data", chunk => text += chunk); input.end(`Runtime\nmigrate\n${approved ? "y" : ""}\nb\nquit\n`);
         const launch = vi.fn(async () => 0);
         expect(await runMenu({ input, output, registryPath: file, targets: [], launch })).toBe(0);
-        expect(text).toContain("Registry update available"); expect(text).toContain("Migrate the registry and apply these changes? (y/N)"); expect(launch).not.toHaveBeenCalled();
+        expect(text.split("Choice")[0]).not.toContain("Migrate");
+        expect(text).toContain("Migrate registry  one server per kind becomes the default");
+        expect(text).toContain("Migrate the registry and apply these changes? (y/N)"); expect(launch).not.toHaveBeenCalled();
         if(approved) { expect(JSON.parse(fs.readFileSync(file, "utf8")).defaultMode).toBe("catalog"); expect(fs.readFileSync(path.join(directory, "registry.previous.json"), "utf8")).toBe(original); }
         else expect(fs.readFileSync(file, "utf8")).toBe(original);
     });

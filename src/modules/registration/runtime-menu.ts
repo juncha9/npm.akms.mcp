@@ -5,6 +5,7 @@ import type { McpKind } from "./types";
 import { PACKAGE_NAME, runtimeIsOlder, runtimePrefix } from "./runtime";
 import { plainText, writeWrapped } from "./comparison";
 import { redactStartupText } from "./startup-check";
+import { migrationMenu, migrationStatus, migrationVersions } from "./migration-menu";
 import { PromptBackError, PromptClosedError, type RegistrationPrompter, type SelectItem } from "./prompter";
 
 export async function prepareRuntime(prompter: RegistrationPrompter, registry: Registry, kind: McpKind, version = PACKAGE_VERSION): Promise<boolean> {
@@ -47,9 +48,14 @@ function updateTarget(installed: string, latest: string | null | undefined): str
 export function runtimeNotice(registry: Registry): { hint: string; notice?: string } {
     const installed = registry.installedRuntime();
     if(!installed) return { hint: PACKAGE_NAME, notice: "Not installed" };
+    const notices: string[] = [];
+    const migration = migrationStatus(registry).status;
+    if(migration === "ready") notices.push("Registry update available");
+    else if(migration === "blocked") notices.push("Registry update blocked");
     const target = installed.linked ? null : updateTarget(installed.version, undefined);
+    if(target) notices.push(`Update available ${target}`);
     const hint = `${PACKAGE_NAME} ${installed.version}${installed.linked ? " · development link" : ""}`;
-    return target ? { hint, notice: `Update available ${target}` } : { hint };
+    return notices.length ? { hint, notice: notices.join(" · ") } : { hint };
 }
 
 function connectionNames(registry: Registry, kind?: McpKind): string[] {
@@ -84,7 +90,7 @@ async function installOrUpdate(prompter: RegistrationPrompter, registry: Registr
         const names = connectionNames(registry);
         if(names.length) await registry.checkSaved(prompter, names);
         prompter.write("Reconnect or restart your AI clients to load it.\n");
-        if(registry.needsMigration()) prompter.write(paint.warning("! Registry update available. Choose Migrate registry in the menu.\n"));
+        if(migrationStatus(registry).status === "ready") prompter.write(paint.warning("! Registry update available. Choose Migrate registry below.\n"));
     } catch(error) {
         let detail = error instanceof Error ? error.message : "Installation failed.";
         for(const item of Object.values(registry.read().connections)) if(item.entry) detail = redactStartupText(detail, item.entry);
@@ -114,7 +120,10 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
             const legacy = registry.legacyRuntimes();
             const removable = legacy.filter(item => !item.usedBy.length);
             const inUse = legacy.filter(item => item.usedBy.length);
-            if(inUse.length) prompter.write(paint.warning(`! Old packages still in use: ${inUse.map(item => item.runtime.packageName).join(", ")}. Run Migrate registry and Sync first.\n`));
+            const migration = migrationStatus(registry);
+            if(migration.status === "waiting") prompter.write(paint.warning(`! Registry update waits: ${plainText(migration.detail ?? "")}\n`));
+            if(migration.status === "blocked") prompter.write(paint.warning(`! Registry update blocked: ${plainText(migration.detail ?? "")}\n`));
+            if(inUse.length) prompter.write(paint.warning(`! Old packages still in use: ${inUse.map(item => `${item.runtime.packageName} ${item.runtime.version}`).join(", ")}. Migrate the registry (and Sync) before removing them.\n`));
             prompter.write("\n");
 
             // (2) Only what can be done now
@@ -122,14 +131,23 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
             if(!installed) items.push({ value: "install", key: "install", label: "Install AKMS MCP", hint: `into ${plainText(runtimePrefix())}` });
             else if(target) items.push({ value: "update", key: "update", label: `Update to ${target}`, hint: `installed ${installed.version}` });
             else if(!installed.linked) items.push({ value: "check", key: "check", label: "Check for updates", hint: "asks npm for the latest release" });
+            if(migration.status === "ready") {
+                // "registry v1 → v2 · @akms/mcp-db 0.3.2 →" dimmed, then the destination in green.
+                const pairs = migrationVersions(registry).map(pair => pair.label === "Registry" ? { from: `registry ${pair.from}`, to: pair.to } : pair);
+                const last = pairs.at(-1);
+                items.push({ value: "migrate", key: "migrate", label: "Migrate registry",
+                    hint: last ? [...pairs.slice(0, -1).map(pair => `${pair.from} → ${pair.to}`), `${last.from} →`].join(" · ") : "one server per kind becomes the default",
+                    ...(last ? { notice: last.to, noticeTone: "success" as const } : {}) });
+            }
             const outdated = KINDS.filter(kind => launchOutdated(registry, kind));
             items.push({ value: "layout", key: "layout", label: "Server layout", hint: layoutSummary(registry),
                 ...(outdated.length ? { notice: `${outdated.map(kind => KIND_LABELS[kind]).join(", ")}: launch out of date` } : {}) });
             if(removable.length) items.push({ value: "remove", key: "remove", label: "Remove old packages", hint: `${removable.map(item => item.runtime.packageName).join(", ")} · not used` });
             items.push({ value: "back", key: "b", label: "Back" });
-            const picked = await prompter.select("Runtime", items, { cancelValue: "back" });
+            const picked = await prompter.select("Runtime", items, { cancelValue: "back", ...(migration.status === "ready" ? { defaultValue: "migrate" } : {}) });
 
             if(picked === "back") return;
+            if(picked === "migrate") { await migrationMenu(prompter, registry); continue; }
             if(picked === "install" || picked === "update") { await installOrUpdate(prompter, registry); latest = undefined; continue; }
             if(picked === "check") {
                 prompter.write(`Checking the latest ${PACKAGE_NAME} release...\n`);

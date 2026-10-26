@@ -16,7 +16,7 @@ In 0.3.x and earlier this server was distributed as `@akms/mcp-wsl` with an `akm
 
 ## Managed server entry
 
-The default layout uses one `akms_wsl` entry per AI client session. Setup writes a direct Node launch like this:
+Setup uses one grouped `akms_wsl` entry per AI client session. Setup writes a direct Node launch like this:
 
 ```json
 {
@@ -36,7 +36,7 @@ Replace the example path with the installed script shown by your runtime; [runti
 
 ## Minimum working configuration
 
-The environment-based examples below describe **one entry per connection**. They omit `--catalog`; in the default layout, enter the same values through setup instead. Install the runtime before using a manual entry, and replace paths and credentials with your own.
+These examples show direct, single-connection startup from environment variables without `--catalog`. Setup always groups connections: enter the same values in setup, or use Register/Import to bring existing manual entries into the catalog and replace them with the grouped `akms_wsl` entry. Install the runtime before using a manual entry, and replace paths and credentials with your own.
 
 Run the MCP client on Windows with Node.js 22+ and npm available. Install the target WSL distro first; it must have `bash`. Use the exact distro name from `wsl -l -q` in this entry, replacing `Ubuntu` if necessary:
 

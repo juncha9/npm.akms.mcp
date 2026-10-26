@@ -16,7 +16,7 @@ In 0.3.x and earlier this server was distributed as `@akms/mcp-db` with an `akms
 
 ## Managed server entry
 
-The default layout uses one `akms_db` entry per AI client session. Setup writes a direct Node launch like this:
+Setup uses one grouped `akms_db` entry per AI client session. Setup writes a direct Node launch like this:
 
 ```json
 {
@@ -36,7 +36,7 @@ Replace the example path with the installed script shown by your runtime; [runti
 
 ## Minimum working configuration
 
-The environment-based examples below describe **one entry per connection**. They omit `--catalog`; in the default layout, enter the same values through setup instead. Install the runtime before using a manual entry, and replace paths and credentials with your own.
+These examples show direct, single-connection startup from environment variables without `--catalog`. Setup always groups connections: enter the same values in setup, or use Register/Import to bring existing manual entries into the catalog and replace them with the grouped `akms_db` entry. Install the runtime before using a manual entry, and replace paths and credentials with your own.
 
 For a direct PostgreSQL connection with password authentication, use this MCP client entry. Replace the host, database, user and password with an existing, reachable database and its credentials. This example uses port `5432` and requires the database to support TLS (the default `DB_SSL=require`).
 
@@ -75,7 +75,7 @@ The full JSON example fits an MCP client's `mcpServers` configuration, such as a
 
 ### Connection through an SSH tunnel
 
-For a database reached through an SSH host, use these values in the individual entry's `env`, or enter them in setup:
+For a database reached through an SSH host, use these values in the manual entry's `env`, or enter them in setup:
 
 ```json
 {
@@ -195,7 +195,7 @@ A rejection says which rule fired, on which statement, and that nothing was sent
 
 ## Security notes
 
-- Saved connection settings hold `DB_PASSWORD` and possibly `DB_SSH_PASSWORD`; per-connection client entries copy those values. Prefer SSH key files where possible and follow the shared [catalog security guidance](../README.md#catalog-security-and-recovery).
+- Grouped connection settings store `DB_PASSWORD` and possibly `DB_SSH_PASSWORD` in the catalog. Manual environment-based client entries can also hold these values until setup imports and replaces them. Prefer SSH key files where possible and follow the shared [catalog security guidance](../README.md#catalog-security-and-recovery).
 - **Anything the agent can reach, a prompt injection can reach.** Rows are untrusted input. Keep a production entry read-only.
 - An unpinned SSH host accepts whatever key it presents — pin it with `DB_SSH_HOST_KEY`.
 
@@ -207,7 +207,7 @@ Use the [contributor guide](../README_DEV.md) for current build and test command
 
 The SQL parser runs in a worker thread that retires after 30 seconds without a pending parse. The next parse starts a new worker; active queries and database connections are independent of that lifecycle.
 
-SSH and crypto modules load only when opening a tunnel. Session mode shares one stdio process among this kind's connections in each client session. Clients start Node directly from the runtime and need to reconnect after updates.
+SSH and crypto modules load only when opening a tunnel. Setup groups this kind's connections in one stdio process per AI client session. Clients start Node directly from the runtime and need to reconnect after updates.
 
 ## License
 

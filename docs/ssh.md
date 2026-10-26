@@ -16,7 +16,7 @@ In 0.3.x and earlier this server was distributed as `@akms/mcp-ssh` with an `akm
 
 ## Managed server entry
 
-The default layout uses one `akms_ssh` entry per AI client session. Setup writes a direct Node launch like this:
+Setup uses one grouped `akms_ssh` entry per AI client session. Setup writes a direct Node launch like this:
 
 ```json
 {
@@ -36,7 +36,7 @@ Replace the example path with the installed script shown by your runtime; [runti
 
 ## Minimum working configuration
 
-The environment-based examples below describe **one entry per connection**. They omit `--catalog`; in the default layout, enter the same values through setup instead. Install the runtime before using a manual entry, and replace paths and credentials with your own.
+These examples show direct, single-connection startup from environment variables without `--catalog`. Setup always groups connections: enter the same values in setup, or use Register/Import to bring existing manual entries into the catalog and replace them with the grouped `akms_ssh` entry. Install the runtime before using a manual entry, and replace paths and credentials with your own.
 
 For a direct SSH connection using a private key, use this MCP client entry. Replace the host, user and key path with your own. The SSH server must be reachable on port `22`, and the matching public key must already be authorized for that user.
 
@@ -148,7 +148,7 @@ Lists are comma-separated and booleans also accept `1`/`0`, `yes`/`no`, `on`/`of
 
 ### Several hosts
 
-In one-server-per-kind mode, add hosts in setup and use their connection-prefixed tools. The following manual example uses one entry per connection. Each one carries its own connection and its own policy, right where you read it, and the agent picks a host by choosing a tool — there is no host argument to get wrong:
+Add hosts in setup to share one grouped server with connection-prefixed tools. The JSON below illustrates manual environment-based launches, each targeting one host with its own policy. Setup imports these connection settings and replaces the separate entries with `akms_ssh`:
 
 ```json
 {
@@ -243,7 +243,7 @@ The file tools run with this server's own privileges on your machine, so `localP
 
 SSH and its crypto runtime load on the first connection instead of during idle MCP startup or local configuration work. The same loaded client supports direct, proxy and jump-host routes. Concurrent callers share the connection attempt, and disconnecting during module loading prevents a later transport from opening. The runtime stays loaded after first use; disconnecting a session closes its transport rather than unloading the module.
 
-Individual mode starts one server process per configured connection in each client session. Session mode combines that kind's connections in one stdio process per client session. Both use the dedicated runtime directly, avoiding a resident npm/npx wrapper. Choose the layout from Runtime > AI service entries and reconnect clients to load it. Connections to remote services remain lazy.
+Setup groups SSH connections in one stdio process per AI client session. Client entries start Node directly from the runtime, and remote connections remain lazy. Manually configured environment-based launches still start one host each; importing them through setup brings their settings into the grouped server. Reconnect clients after changing saved connections.
 
 Restart MCP connections after updating to apply the new code. Compare process counts and Windows Private Bytes separately from resident memory (RSS), including npm wrappers in the total.
 

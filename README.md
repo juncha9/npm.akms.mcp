@@ -120,7 +120,7 @@ Each client session owns its MCP processes. Start a fresh session or thread afte
 
 ## Catalog security and recovery
 
-The shared catalog is `~/.akms/mcp/registry.json`, or `$AKMS_MCP_HOME/registry.json`. It contains complete connection settings, including passwords and secret values **in plaintext**. In per-connection mode these values also appear in AI client entries. The previous revision, `registry.previous.json`, also contains saved credentials. SSH private-key settings store file paths, not the key files themselves.
+The shared catalog is `~/.akms/mcp/registry.json`, or `$AKMS_MCP_HOME/registry.json`. It contains complete connection settings, including passwords and secret values **in plaintext**. Grouped AI client entries hold no connection credentials; manual or older entries that have not been imported still hold their own values. The previous revision, `registry.previous.json`, also contains saved credentials. SSH private-key settings store file paths, not the key files themselves.
 
 On POSIX, new catalog files request mode `0600` and new catalog directories `0700`; existing permissions are not tightened. Windows uses inherited parent-directory ACLs. Check access permissions when choosing a custom location.
 

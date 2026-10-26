@@ -270,3 +270,19 @@ $RECYCLE.BIN/
 lib/
 .tmp/
 *.tgz
+
+### AKMS MCP kinds ###
+# Local host profiles — contain credentials, never commit (from @akms/mcp-ssh)
+.akms-ssh.json
+*.akms-ssh.json
+akms-ssh.config.json
+# Private keys accidentally dropped into the repo
+*.pem
+id_rsa*
+id_ed25519*
+.env.*.local
+.idea/
+*.swp
+*.swo
+# Staged build output (same depth as lib)
+.lib-stage/

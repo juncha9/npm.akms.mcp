@@ -1,5 +1,6 @@
 import type { Registry } from "@/modules/registration/registry";
 import { ManagedSession } from "@/modules/registration/menu";
+import { screenText, writeField, writeHeading, writeHint, writeOutcome, writeWarning } from "@/modules/registration/display";
 import type { ManagementMode } from "@/modules/registration/menu";
 import type { Readable, Writable } from "node:stream";
 
@@ -77,12 +78,14 @@ function indent(text: string): string {
 function reportWrite(prompter: Prompter, result: ConfigWriteResult, action: string): void {
     prompter.clearScreen();
     if (result.status === "written") {
-        prompter.write(`  ${prompter.paint.success(action)} ${prompter.paint.dim(result.detail)}\n`);
-        prompter.write(prompter.paint.dim("  Restart the client (or reconnect it from its MCP menu) to pick up the change.\n\n"));
+        writeOutcome(prompter, action, result.detail, "success");
+        writeHint(prompter, "Restart or reconnect the client to load the change.");
+        prompter.write("\n");
         return;
     }
 
-    prompter.write(`  Not ${action.toLowerCase()}: ${result.detail}\n\n`);
+    writeOutcome(prompter, `Not ${action.toLowerCase()}`, result.detail, "error");
+    prompter.write("\n");
 }
 
 /**
@@ -118,7 +121,9 @@ async function addOrEditHost(
     entry = target.prepareEntry?.(answers.name, entry, existingName) ?? entry;
     for (;;) {
         prompter.clearScreen();
-        output.write(`\n  ${prompter.paint.dim(`This goes into ${target.location}:`)}\n\n`);
+        writeHeading(prompter, "Review SSH host");
+        writeField(prompter, "Save to", target.location);
+        output.write("\n");
         output.write(`${indent(formatForTarget(target, answers.name, maskSecrets(entry)))}\n\n`);
 
         let confirmed: boolean;
@@ -315,7 +320,7 @@ async function manageHost(
 }
 
 /**
- * `akms-mcp-ssh config` — an interactive manager for the SSH hosts registered in an MCP
+ * `npx -y @akms/mcp@latest ssh` — an interactive manager for the SSH hosts registered in an MCP
  * client's config. The hosts themselves are the menu: pick one to edit, check, copy, print or
  * remove it, or pick an action below them. The `SSH_*` names never have to be typed.
  *
@@ -358,14 +363,18 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
             if(options.management) {
                 output.write(paint.bold("SSH connections") + "\n");
                 options.management.writeStatus(prompter);
-            } else output.write(`\n${paint.bold(target.label)}  ${paint.dim(target.location)}\n`);
+            } else {
+                writeHeading(prompter, "SSH connections");
+                writeField(prompter, "Client", target.label);
+                writeField(prompter, "Location", target.location);
+            }
             if (readError != null) {
-                output.write(`  Cannot read it: ${readError}\n  Fix the file by hand, or switch to another client.\n`);
+                writeWarning(prompter, `Cannot read it: ${readError}. Check the file or switch client.`);
             }
             else {
                 const otherCount = Object.keys(entries).length - names.length;
                 if (otherCount > 0) {
-                    output.write(paint.dim(`  ${otherCount} other MCP server(s) in this file are not managed here.\n`));
+                    output.write(`  ${paint.accent(String(otherCount))}${paint.dim(" other MCP server(s) in this file are not managed here.")}\n`);
                 }
             }
             output.write("\n");
@@ -390,7 +399,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 items.push({ value: "switch", key: "t", label: "Switch client", hint: switchHint });
             }
             if(options.management) options.management.decorate(items);
-            items.push({ value: "quit", key: "q", label: "Quit" });
+            items.push({ value: "quit", key: "q", label: "Back" });
 
             let question = "No SSH hosts here yet";
             if (names.length === 1) {
@@ -450,7 +459,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 if (ex instanceof PromptBackError) {
                     continue;
                 }
-                output.write(`  Failed: ${errorMessage(ex)}\n\n`);
+                output.write(`  ${paint.error("Failed:")} ${screenText(errorMessage(ex))}\n\n`);
                 await prompter.acknowledge();
             }
         }
@@ -468,7 +477,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
     }
 }
 
-/** Independent registration and shared connection management; never invokes @akms/mcp. */
+/** Kind-specific configuration over the shared AKMS catalog. */
 export async function runConfigCommand(options: ConfigCommandOptions): Promise<number> {
     const management = new ManagedSession({ kind: "ssh", version: SERVER_VERSION, targets: options.targets ?? listConfigTargets(), registryPath: options.registryPath, mode: options.mode, targetId: options.targetId, runtimeOptions: options.runtimeOptions });
     return runTargetConfigCommand({ ...options, targets: [management.target], targetId: undefined, management });

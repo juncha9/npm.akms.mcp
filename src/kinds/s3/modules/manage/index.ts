@@ -2,6 +2,7 @@ import { launchCommand, launchKind } from "@/modules/registration/runtime";
 import type { Registry } from "@/modules/registration/registry";
 import { RegistryError } from "@/modules/registration/registry";
 import { ManagedSession } from "@/modules/registration/menu";
+import { screenText, writeField, writeHeading, writeHint, writeOutcome, writeWarning } from "@/modules/registration/display";
 import type { ManagementMode } from "@/modules/registration/menu";
 import type { Readable, Writable } from "node:stream";
 import { isDeepStrictEqual } from "node:util";
@@ -47,7 +48,7 @@ async function form(prompter: Prompter, output: Writable, target: ConfigTarget, 
                 const value = await prompter.askSecret(`${label}${env[field] ? " (Enter keeps existing; - clears)" : required ? "" : " (optional)"}`);
                 if(value === "-") delete env[field]; else if(value) env[field] = value;
                 if(!required || env[field]) break;
-                prompter.write("  This credential is required.\n");
+                writeWarning(prompter, "This credential is required.");
             }
         }
     }
@@ -66,6 +67,8 @@ async function form(prompter: Prompter, output: Writable, target: ConfigTarget, 
     entry = target.prepareEntry?.(entryName, entry, name) ?? entry;
     for(;;) {
         prompter.clearScreen();
+        writeHeading(prompter, "Review S3 connection");
+        writeField(prompter, "Save to", target.location);
         prompter.write(`\n${JSON.stringify({ [entryName]: maskEntry(entry) }, null, 2)}\n`);
         const action = await prompter.select("Connection ready", [{ value: "save", label: target.id === "registered" ? "Save and apply to all registered services" : "Save" }, { value: "check", label: "Test connection" }, { value: "back", label: "Cancel" }], { cancelValue: "back" });
         if(action === "back") return;
@@ -77,15 +80,15 @@ async function form(prompter: Prompter, output: Writable, target: ConfigTarget, 
         if(!name && exists) {
             if(!await prompter.askYesNo("That name already exists. Overwrite it?", false)) return;
         } else if(name && (!exists || !isDeepStrictEqual(latest[entryName], original))) {
-            prompter.write("  This connection changed while the form was open. Reload it before editing; nothing was saved.\n");
+            writeWarning(prompter, "This connection changed. Reload it before editing; nothing was saved.");
             await prompter.acknowledge();
             return;
         }
         const result = target.writeEntry(entryName, entry, !name ? { replace: true } : undefined);
         prompter.clearScreen();
-        prompter.write(`  ${result.status === "written" ? "Saved" : "Not saved"}: ${result.detail}\n`);
+        writeOutcome(prompter, result.status === "written" ? "Saved" : "Not saved", result.detail, result.status === "written" ? "success" : "error");
         if(result.status === "written") await management?.checkSaved(prompter, entryName, original);
-        if(result.status === "written") prompter.write("  Reconnect or restart the client to load the change.\n");
+        if(result.status === "written") writeHint(prompter, "Reconnect or restart the client to load the change.");
         await prompter.acknowledge();
         return;
     }
@@ -101,12 +104,12 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
         for(;;) {
             try {
                 prompter.clearScreen();
-                prompter.write("S3 connections\n");
+                writeHeading(prompter, "S3 connections");
                 options.management?.writeStatus(prompter);
                 let entries: Record<string, McpServerEntry>;
                 try { entries = target.readEntries(); }
                 catch {
-                    prompter.write("  Could not read this client's configuration. Correct its syntax and permissions, then reopen config.\n");
+                    writeWarning(prompter, "Could not read this client's configuration. Check syntax and permissions, then reopen config.");
                     await prompter.acknowledge();
                     return;
                 }
@@ -114,7 +117,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 choices.push({ separator: true }, { value: "add", key: "a", label: "Add S3 connection" });
                 if(targets.length > 1) choices.push({ value: "client", key: "c", label: "Change client" });
                 if(options.management) options.management.decorate(choices);
-                choices.push({ value: "quit", key: "q", label: "Quit" });
+                choices.push({ value: "quit", key: "q", label: "Back" });
                 const selected = await prompter.select(`S3 connections - ${target.label}`, choices, { cancelValue: "quit" });
                 if(selected === "quit") return;
                 prompter.clearScreen();
@@ -141,7 +144,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                             if(action === "remove" && await prompter.askYesNo(`Remove ${name} from ${target.label}?`, false)) {
                                 const result = target.removeEntry(name);
                                 prompter.clearScreen();
-                                prompter.write(`  ${result.status}: ${result.detail}\n`);
+                                writeOutcome(prompter, result.status === "written" ? "Removed" : "Not removed", result.detail, result.status === "written" ? "success" : "error");
                                 await prompter.acknowledge();
                                 break;
                             }
@@ -152,7 +155,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 if(error instanceof PromptClosedError) return;
                 if(error instanceof PromptBackError) continue;
                 // Config writers already redact parser content; unknown errors stay generic.
-                prompter.write(`  ${(error instanceof ConfigError || error instanceof RegistryError) ? error.message : "Could not complete the action. Check configuration file syntax, permissions and connection settings."}\n`);
+                prompter.write(`${prompter.paint.error("Failed")} ${screenText((error instanceof ConfigError || error instanceof RegistryError) ? error.message : "Could not complete the action. Check syntax, permissions and connection settings.")}\n`);
                 await prompter.acknowledge();
             }
         }
@@ -162,7 +165,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
     } finally { prompter.close(); }
 }
 
-/** Independent registration and shared connection management; never invokes @akms/mcp. */
+/** Kind-specific configuration over the shared AKMS catalog. */
 export async function runConfigCommand(options: ConfigCommandOptions): Promise<void> {
     const management = new ManagedSession({ kind: "s3", version: SERVER_VERSION, targets: options.targets ?? listConfigTargets(), registryPath: options.registryPath, mode: options.mode, targetId: options.targetId, runtimeOptions: options.runtimeOptions });
     return runTargetConfigCommand({ ...options, targets: [management.target], targetId: undefined, management });

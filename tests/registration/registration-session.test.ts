@@ -171,7 +171,7 @@ describe("registry v2 session migration", () => {
         const { registry, targets } = fixture(); const external = entry("db", "private-external"); targets[0].writeEntry("first", external);
         registry.applySession(registry.planSession("db", "catalog")); registry.write("db", "renamed", entry(), "first");
         const text = await screen(["1", "shared", "y"], prompter => syncMenu(prompter, registry));
-        expect(text).toContain("individual client entry is no longer needed");
+        expect(text).toContain("Action       Remove connection");
         expect(targets[0].readEntries().first).toBeUndefined(); expect(registry.read().connections.first).toBeUndefined();
         expect(registry.read().connections.renamed.entry).toEqual(entry());
     });

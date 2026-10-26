@@ -56,11 +56,11 @@ describe("standalone db registration", () => {
         const menu = terminal();
         const config = runConfigCommand({ input: menu.input, output: menu.output, targets: values.targets, registryPath: values.registryPath, runtimeOptions: values.runtimeOptions });
         await new Promise<void>((resolve) => setImmediate(resolve));
-        expect(menu.page()).toContain("Needs attention: 1 connection(s). Open Sync in the AKMS MCP menu.");
+        expect(menu.page()).toContain("Needs attention: 1 connection. Open Sync in the AKMS MCP menu.");
         expect(menu.page()).not.toContain("review differences and retry");
         await menu.press("\u001b");
         await config;
-        // `akms-mcp-db sync` opens the same Sync screen as the menu.
+        // `npx -y @akms/mcp@latest db sync` opens the same Sync screen as the menu.
         const review = terminal();
         const firstSync = runConfigCommand({ input: review.input, output: review.output, targets: values.targets, registryPath: values.registryPath, runtimeOptions: values.runtimeOptions, mode: "sync" });
         await new Promise<void>((resolve) => setImmediate(resolve));
@@ -139,7 +139,7 @@ describe("standalone db registration", () => {
         const registered = await run(values, ["cursor", "claude-desktop", "a", "y"], "register");
         const text = registered + await run(values, ["q"]);
         expect(Object.keys(values.registry.target("db").readEntries())).toEqual(["legacy-connection"]);
-        expect(text).toContain("Imported 1 existing connection(s)");
+        expect(text).toMatch(/Imported\s+1 connection\s+saved in the shared catalog/);
         expect(text).toContain("legacy-connection");
         expect(text).not.toContain("Switch client");
         values.targets.forEach((target, index) => expect(fs.readFileSync(target.location, "utf8")).toBe(originals[index]));
@@ -150,7 +150,7 @@ describe("standalone db registration", () => {
         values.targets[0].writeEntry("legacy-connection", existing);
         const before = fs.readFileSync(values.targets[0].location, "utf8");
         const text = await run(values, ["a", "q"]);
-        expect(text).toContain("Register, Sync and Runtime are in the AKMS MCP menu");
+        expect(text).toMatch(/Setup\s+npx -y @akms\/mcp@latest\s+Register · Sync · Runtime/);
         expect(text).toContain("Choose Register in the AKMS MCP menu");
         expect(text).not.toContain("Import existing connections");
         expect(text).toContain("Register an AI service first");

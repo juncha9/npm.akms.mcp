@@ -116,7 +116,7 @@ describe("ordered registry migration", () => {
     it("shows the config notice and action only for an older format", async () => {
         const { registry, targets, options } = fixture(); const management = new ManagedSession({ kind: "db", targets, registryPath: registry.file, runtimeOptions: options });
         const status = () => screen([], prompt => { management.writeStatus(prompt); return Promise.resolve(); });
-        expect(await status()).toContain("Registry update available. Choose Migrate registry in the AKMS MCP menu.");
+        expect(await status()).toContain("Registry update available. Open Runtime in the AKMS MCP menu to migrate.");
         registry.applyMigration(registry.planMigration());
         expect(await status()).not.toContain("Registry update available");
     });

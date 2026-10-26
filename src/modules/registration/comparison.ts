@@ -25,12 +25,12 @@ export function writeWrapped(prompter: RegistrationPrompter, text: string, inden
     let width = displayWidth(indent);
     let segment = "";
     let highlighted = false;
-    const flush = () => { line += highlighted ? prompter.paint.accent(prompter.paint.bold(segment)) : segment; segment = ""; };
+    const flush = () => { line += highlighted ? prompter.paint.accent(prompter.paint.bold(segment)) : style ? style(segment) : segment; segment = ""; };
     for(let index = 0; index < characters.length; index++) {
         const character = characters[index];
         const size = displayWidth(character);
         if(width + size > prompter.width) {
-            flush(); prompter.write((style ? style(line) : line) + "\n"); line = indent; width = displayWidth(indent);
+            flush(); prompter.write(line + "\n"); line = indent; width = displayWidth(indent);
         }
         const highlight = !!changed && index >= changed[0] && index < changed[1];
         if(highlight !== highlighted) { flush(); highlighted = highlight; }
@@ -38,7 +38,7 @@ export function writeWrapped(prompter: RegistrationPrompter, text: string, inden
         width += size;
     }
     flush();
-    prompter.write((style ? style(line) : line) + "\n");
+    prompter.write(line + "\n");
 }
 
 /** Mark only the changed middle; compare masked values, never secrets. */
@@ -55,7 +55,8 @@ function changedRange(values: string[], index: number): [number, number] | undef
 export function compareEntries(prompter: RegistrationPrompter, versions: { label: string; entry: McpServerEntry }[]): void {
     const entries = versions.map((version) => version.entry);
     const fields = differingFields(entries);
-    writeWrapped(prompter, descriptionOnly(entries) ? "Description differs. Connection settings match." : `${fields.length} setting(s) differ.`);
+    if(descriptionOnly(entries)) prompter.write(`${prompter.paint.warning("Description differs.")} ${prompter.paint.dim("Connection settings match.")}\n`);
+    else prompter.write(`${prompter.paint.accent(String(fields.length))} ${prompter.paint.warning("setting(s) differ.")}\n`);
     const values = fields.map((field) => {
         const key = field.replace(/^env\./, "");
         return versions.map(({ entry }) => field.startsWith("env.") && visibleField.test(key)
@@ -70,7 +71,7 @@ export function compareEntries(prompter: RegistrationPrompter, versions: { label
                 const size = displayWidth(character);
                 if(lines[lines.length - 1].width + size > width) lines.push({ text: "", width: 0 });
                 const line = lines[lines.length - 1];
-                line.text += changed && index >= changed[0] && index < changed[1] ? prompter.paint.accent(prompter.paint.bold(character)) : character;
+                line.text += prompter.paint.accent(changed && index >= changed[0] && index < changed[1] ? prompter.paint.bold(character) : character);
                 line.width += size;
             }
             return lines;
@@ -92,12 +93,12 @@ export function compareEntries(prompter: RegistrationPrompter, versions: { label
     }
     for(let index = 0; index < versions.length; index++) {
         prompter.write("\n");
-        writeWrapped(prompter, `[${index + 1}] ${versions[index].label}`);
+        writeWrapped(prompter, `[${index + 1}] ${versions[index].label}`, "", undefined, prompter.paint.bold);
         for(let field = 0; field < fields.length; field++) {
-            writeWrapped(prompter, fieldName(fields[field]), "  ");
-            writeWrapped(prompter, values[field][index], "    ", changedRange(values[field], index));
+            writeWrapped(prompter, fieldName(fields[field]), "  ", undefined, prompter.paint.dim);
+            writeWrapped(prompter, values[field][index], "    ", changedRange(values[field], index), prompter.paint.accent);
         }
     }
-    if(values.some((row) => row.includes("(hidden)"))) prompter.write("\nSecret values are hidden.\n");
+    if(values.some((row) => row.includes("(hidden)"))) prompter.write(prompter.paint.dim("\nSecret values are hidden.\n"));
     prompter.write("\n");
 }

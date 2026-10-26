@@ -1,4 +1,5 @@
 import type { Writable } from "node:stream";
+import { writeFormHelp, writeWarning } from "@/modules/registration/display";
 
 import type { HostSetupAnswers, WslDistroListing } from "@wsl/_types";
 
@@ -115,7 +116,7 @@ async function askDistro(prompter: Prompter, distros: WslDistroListing[], curren
             return listed.name;
         }
 
-        prompter.write(`  ${typed} is not in 'wsl -l -v'.\n`);
+        writeWarning(prompter, `${typed} is not in 'wsl -l -v'.`);
         const useAnyway = await prompter.askYesNo("Use this name anyway?", false);
         if (useAnyway == true) {
             return typed;
@@ -308,7 +309,7 @@ async function editField(prompter: Prompter, state: FormState, distros: WslDistr
                 state.nameTouched = true;
                 return;
             }
-            prompter.write("  Use letters, digits, '-' and '_' only (max 48) — the name becomes part of every tool name.\n");
+            writeWarning(prompter, "Use letters, digits, '-' and '_' only (max 48) — the name becomes part of every tool name.");
         }
     }
 
@@ -395,7 +396,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
         title = `Editing ${existing.name}`;
     }
 
-    output.write(prompter.paint.dim(`\n  Pick a setting to change it. In a text field, Enter keeps the value shown and ${CLEAR_ANSWER} clears it.\n\n`));
+    writeFormHelp(prompter, CLEAR_ANSWER);
 
     const previousTransient = prompter.transient;
     prompter.transient = true;
@@ -428,7 +429,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
                 // (2) Test
                 if (picked === "test") {
                     if (missing.length > 0) {
-                        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.\n`);
+                        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.`);
                         cursor = missing[0];
                         continue;
                     }
@@ -444,7 +445,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
                 // (3) Save
                 if (picked === "save") {
                     if (missing.length > 0) {
-                        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.\n`);
+                        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.`);
                         cursor = missing[0];
                         continue;
                     }

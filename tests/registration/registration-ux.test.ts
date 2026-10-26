@@ -16,6 +16,7 @@ beforeEach(() => {
     directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-registration-ux-"));
     vi.stubEnv("AKMS_MCP_HOME", directory);
     vi.stubEnv("NO_COLOR", undefined);
+    vi.stubEnv("TERM_PROGRAM", "vscode");
 });
 afterEach(async () => {
     vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
@@ -82,12 +83,13 @@ describe("registration results and next actions", () => {
         vi.mocked(f.targets[0].writeEntry).mockReturnValue({ status: "unavailable", detail: "fixture failure" });
         const results = f.registry.sync();
         const text = terminal(p => p.write(f.registry.formatResults(results, "Sync results", p.paint)));
+        const plain = stripVTControlCharacters(text);
         expect(text).toContain("\u001b[31mCould not finish:");
         expect(text).toContain("\u001b[31mFAILED ");
-        expect(text).toContain("Waiting for akms_ssh");
-        expect(text).toContain("Kept in Claude Code until akms_ssh is applied: host_1");
-        expect(text).not.toContain("Kept in Codex");
-        expect(text).not.toContain("Waiting for runtime");
+        expect(plain).toContain("Waiting for akms_ssh");
+        expect(plain).toContain("Kept in Claude Code until akms_ssh is applied: host_1");
+        expect(plain).not.toContain("Kept in Codex");
+        expect(plain).not.toContain("Waiting for runtime");
         expect(text.slice(text.indexOf("Could not finish"))).not.toContain("kept until");
         expect(f.targets[0].readEntries().host_1).toEqual(entry());
     });
@@ -129,7 +131,7 @@ describe("registration results and next actions", () => {
         f.targets[0].writeEntry("host_note", entry("First description"));
         f.targets[1].writeEntry("host_note", entry("Second description")); f.register();
         const text = await screen(["import", "host_note", "0", "", "y", "b"], p => syncMenu(p, f.registry));
-        expect(text).toContain("Not yet imported: 1 connection(s) with differing settings - open Import existing connections.");
+        expect(text).toContain("Not imported  1 connection  different settings · choose Import existing connections");
         expect(text).toContain("[1] Claude Code"); expect(text).toContain("[2] Codex");
         expect(text).toContain("First description"); expect(text).toContain("Second description");
         expect(f.registry.read().connections.host_note.entry?.env.SSH_DESCRIPTION).toBe("First description");
@@ -145,7 +147,7 @@ describe("registration results and next actions", () => {
         expect(text).toContain("Saved host"); expect(text).toContain("Externally edited description");
         expect(text).toContain("Which description should be used?");
         expect(text).toContain("Use 1: keep AKMS settings"); expect(text).toContain("Use 2: Codex -> all 2 services");
-        expect(text).toContain("The old entry stays until the session server is ready.");
+        expect(text).toContain("Kept in      Codex  old entry stays until this server is ready");
         expect(f.registry.read().connections.host_1.entry?.env.SSH_DESCRIPTION).toBe(choice === "client" ? "Externally edited description" : "Saved host");
         expect(fs.readFileSync(f.targets[1].location, "utf8")).toBe(before);
         if(choice !== "decline") { f.install(); f.registry.sync(); expect(Object.keys(f.targets[1].readEntries())).toEqual(["akms_ssh"]); }
@@ -168,11 +170,11 @@ describe("registration results and next actions", () => {
             f.targets[0].writeEntry("extra", entry()); session.writeStatus(p);
             const state = f.registry.read(); delete state.defaultMode; fs.writeFileSync(f.registry.file, JSON.stringify(state)); session.writeStatus(p);
         }, tty);
-        expect(text).toContain("Needs attention: 1 connection(s)");
-        expect(text).toContain("Import available: 1 connection(s)");
+        expect(text).toContain("Needs attention: 1 connection");
+        expect(text).toContain("Import available: 1 connection");
         expect(text).toContain("Registry update available.");
         expect(/\u001b\[\d+m/.test(text)).toBe(tty && !noColor);
-        if(tty && !noColor) { expect(text).toContain("\u001b[33mWaiting"); expect(text).toContain("\u001b[32m0 updated"); expect(text).toContain("\u001b[2m"); }
+        if(tty && !noColor) { expect(text).toContain("\u001b[33mWaiting"); expect(text).toContain("\u001b[36m1"); expect(text).toContain("\u001b[2m0 updated"); expect(text).toContain("\u001b[2m"); }
         if(!tty) expect(text).not.toContain("\u001b");
     });
     it("keeps the existing symbols on legacy Windows terminals", async () => {
@@ -186,6 +188,7 @@ describe("registration results and next actions", () => {
             input.write("\r"); expect(await done).toBe("ok");
             expect(stripVTControlCharacters(text)).toContain("√ Next step · Sync");
             expect(stripVTControlCharacters(text)).toContain("> Sync");
+            expect(/\u001b\[[0-9;]*m/.test(text)).toBe(true);
             expect(stripVTControlCharacters(text)).not.toMatch(/[❯✔─]/);
         } finally { p.close(); }
     });

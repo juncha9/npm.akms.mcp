@@ -270,7 +270,7 @@ describe("independent shared registration", () => {
         expect(fs.readFileSync(registry.file, "utf8")).toBe(JSON.stringify({ version: 1, clients: [], connections: {} }));
         const text = await screen(["cursor", "codex", "a", "y"], (prompter) => registrationMenu(prompter, registry));
         expect(text).toContain("1 existing AKMS");
-        expect(text).toContain("Imported 1 existing connection(s)");
+        expect(text).toMatch(/Imported\s+1 connection\s+saved in the shared catalog/);
         expect(text).not.toContain("Review existing AKMS connections to import?");
         expect(text).not.toContain("test-secret");
         expect(Object.keys(registry.target("db").readEntries())).toEqual(["legacy-db"]);
@@ -284,7 +284,7 @@ describe("independent shared registration", () => {
         const beforeJson = fs.readFileSync(json.location, "utf8");
         const beforeToml = fs.readFileSync(toml.location, "utf8");
         const text = await screen(["cursor", "codex", "a", "y", "n"], (prompter) => registrationMenu(prompter, registry));
-        expect(text).toContain("Keep 1 differing connection(s) unchanged");
+        expect(text).toMatch(/Kept\s+1 need a version choice\s+legacy-db/);
         expect(registry.read().connections).toEqual({});
         expect(fs.readFileSync(json.location, "utf8")).toBe(beforeJson);
         expect(fs.readFileSync(toml.location, "utf8")).toBe(beforeToml);
@@ -352,8 +352,8 @@ describe("independent shared registration", () => {
         registry.write("db", "app-db", entry());
         json.writeEntry("app-db", entry("edited.local"));
         const text = await screen(["0", "client", "y"], (prompter) => syncMenu(prompter, registry));
-        expect(text).toContain("Save the Cursor version in AKMS.");
-        expect(text).toContain("Sync to: Cursor · Codex");
+        expect(text).toMatch(/Save version\s+Cursor\s+in AKMS/);
+        expect(text).toMatch(/Apply to\s+Cursor · Codex/);
         expect(text).toContain("Save in AKMS and sync 2 services?");
         expect(text).not.toContain("test-secret");
         expect(toml.readEntries()["app-db"].env.DB_HOST).toBe("edited.local");
@@ -366,7 +366,7 @@ describe("independent shared registration", () => {
         const before = fs.readFileSync(toml.location, "utf8");
         const text = await screen(["0", "shared", "n", "b"], (prompter) => syncMenu(prompter, registry));
         expect(text).toContain("Use 1: AKMS -> Codex");
-        expect(text).toContain("Copy the saved AKMS settings to Codex.");
+        expect(text).toMatch(/Keep version\s+AKMS\s+apply settings to Codex/);
         expect(text).toContain("Update Codex with version 1?");
         expect(fs.readFileSync(toml.location, "utf8")).toBe(before);
         await screen(["0", "shared", "y"], (prompter) => syncMenu(prompter, registry));
@@ -379,7 +379,7 @@ describe("independent shared registration", () => {
         toml.writeEntry("app-db", entry("edited.local"));
         registry.register(["cursor"]);
         const text = await screen(["0", "shared", "y"], (prompter) => syncMenu(prompter, registry));
-        expect(text).toContain("Codex is no longer registered.");
+        expect(text).toMatch(/Action\s+Codex unregistered/);
         expect(text).toContain("Remove from Codex?");
         expect(text).not.toContain("Use 1:");
         expect(text).not.toContain("Restore from Codex");
@@ -393,7 +393,7 @@ describe("independent shared registration", () => {
         toml.writeEntry("app-db", entry("edited.local"));
         registry.remove("db", "app-db");
         const text = await screen(["0", "client", "y"], (prompter) => syncMenu(prompter, registry));
-        expect(text).toContain("This connection was removed from AKMS.");
+        expect(text).toMatch(/Action\s+Remove connection/);
         expect(text).toContain("Restore from Codex");
         expect(text).toContain("Save in AKMS and sync 2 services?");
         expect(json.readEntries()["app-db"]).toEqual(entry("edited.local"));

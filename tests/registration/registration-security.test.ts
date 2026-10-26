@@ -85,9 +85,10 @@ describe("catalog security documentation evidence", () => {
     it("shows the privacy notice once across repeated Apply reviews in plain piped input", async () => {
         const { registry } = fixture();
         const text = await screen(["cursor", "a", "n", "a", "y"], prompter => registrationMenu(prompter, registry));
-        expect(text.match(/Connection settings, including passwords, are stored in/g)).toHaveLength(1);
+        expect(text.match(/Plaintext passwords:/g)).toHaveLength(1);
         expect(text.replace(/\r?\n/g, "")).toContain(registry.file);
-        expect(text.match(/Keep this file private: do not share, sync or commit it\./g)).toHaveLength(1);
+        expect(text.match(/registry\.previous\.json\. Do not share, sync or commit\./g)).toHaveLength(1);
+        expect(text.split("\n").filter(line => line.includes("Plaintext passwords:"))).toHaveLength(1);
         expect(text).not.toContain("\u001b");
         expect(registry.read().clients).toEqual(["cursor"]);
     });
@@ -95,7 +96,7 @@ describe("catalog security documentation evidence", () => {
     it("does not repeat the privacy notice while only selecting services", async () => {
         const { registry } = fixture({ legacy: false });
         const text = await screen(["cursor", "cursor", "cursor", "back"], prompter => registrationMenu(prompter, registry));
-        expect(text).not.toContain("Connection settings, including passwords");
+        expect(text).not.toContain("Plaintext passwords:");
         expect(fs.existsSync(registry.file)).toBe(false);
     });
 

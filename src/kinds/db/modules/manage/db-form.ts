@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Writable } from "node:stream";
+import { writeFormHelp, writeWarning } from "@/modules/registration/display";
 import { DEFAULT_POSTGRES_PORT, DEFAULT_SSH_PORT, MAX_PORT } from "@db/_defs";
 import type { DbDriverName, DbSetupAnswers, SshAuthMethod, SslMode } from "@db/_types";
 import { expandHomePath } from "@db/_libs/env";
@@ -232,7 +233,7 @@ async function askPort(prompter: Prompter, question: string, current: number): P
             return parsed;
         }
 
-        prompter.write(`  Enter a port number between 1 and ${MAX_PORT}.\n`);
+        writeWarning(prompter, `Enter a port number between 1 and ${MAX_PORT}.`);
     }
 }
 
@@ -300,7 +301,7 @@ async function askKeyPath(prompter: Prompter, current: string | undefined): Prom
             return typed;
         }
 
-        prompter.write(`  ${expandHomePath(typed)} does not exist.\n`);
+        writeWarning(prompter, `${expandHomePath(typed)} does not exist.`);
         const useAnyway = await prompter.askYesNo("Use this path anyway?", false);
         if(useAnyway == true) {
             return typed;
@@ -319,7 +320,7 @@ async function askCaPath(prompter: Prompter, current: string | undefined): Promi
             return typed;
         }
 
-        prompter.write(`  ${expandHomePath(typed)} does not exist — the server refuses to start without it.\n`);
+        writeWarning(prompter, `${expandHomePath(typed)} does not exist — the server refuses to start without it.`);
         const useAnyway = await prompter.askYesNo("Use this path anyway?", false);
         if(useAnyway == true) {
             return typed;
@@ -599,12 +600,12 @@ async function testConnection(prompter: Prompter, output: Writable, state: FormS
         && state.answers.sshHostKeyFingerprint != null
         && result.hostKeyFingerprint !== state.answers.sshHostKeyFingerprint;
     if(hostKeyChanged == true) {
-        output.write("  The SSH host presented a different key than the pinned one. Re-pin only if you know it was rebuilt.\n");
+        writeWarning(prompter, "The SSH host presented a different key than the pinned one. Re-pin only if you know it was rebuilt.");
         try {
             const repin = await prompter.askYesNo(`Pin ${result.hostKeyFingerprint} instead?`, false);
             if(repin == true) {
                 state.answers.sshHostKeyFingerprint = result.hostKeyFingerprint ?? undefined;
-                output.write("  Pinned the new key — test again to confirm.\n");
+                output.write("  " + prompter.paint.success("Pinned the new key") + prompter.paint.dim(" — test again to confirm.") + "\n");
             }
         }
         catch(ex) {
@@ -688,7 +689,7 @@ async function editField(prompter: Prompter, output: Writable, state: FormState,
                 state.nameTouched = true;
                 return;
             }
-            prompter.write("  Use letters, digits, '-' and '_' only (max 48) — the name becomes part of every tool name.\n");
+            writeWarning(prompter, "Use letters, digits, '-' and '_' only (max 48) — the name becomes part of every tool name.");
         }
     }
 
@@ -817,7 +818,7 @@ async function editField(prompter: Prompter, output: Writable, state: FormState,
 
     const missing = missingFields(state);
     if(missing.length > 0) {
-        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first — the key is pinned by testing the connection.\n`);
+        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first — the key is pinned by testing the connection.`);
         return;
     }
 
@@ -882,7 +883,7 @@ export async function runDbForm(prompter: Prompter, output: Writable, options: D
 
     const initialSnapshot = snapshotOf(state);
 
-    output.write(prompter.paint.dim(`\n  Pick a setting to change it. In a text field, Enter keeps the value shown and ${CLEAR_ANSWER} clears it. Esc goes back.\n\n`));
+    writeFormHelp(prompter, CLEAR_ANSWER);
 
     const previousTransient = prompter.transient;
     prompter.transient = true;
@@ -911,7 +912,7 @@ export async function runDbForm(prompter: Prompter, output: Writable, options: D
                 // (2) Test
                 if(picked === "test") {
                     if(missing.length > 0) {
-                        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.\n`);
+                        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.`);
                         cursor = missing[0];
                         continue;
                     }
@@ -927,7 +928,7 @@ export async function runDbForm(prompter: Prompter, output: Writable, options: D
                 // (3) Save
                 if(picked === "save") {
                     if(missing.length > 0) {
-                        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.\n`);
+                        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.`);
                         cursor = missing[0];
                         continue;
                     }

@@ -1,6 +1,7 @@
 import type { ConfigTarget, McpServerEntry } from "@wsl/_types";
 import { PromptBackError, Prompter } from "./prompter";
 import type { SelectItem } from "./prompter";
+import { screenText, writeField, writeHint, writeWarning } from "@/modules/registration/display";
 
 /** Copies the saved command, arguments and environment without reopening the settings form. */
 export async function copyEntryToClient(
@@ -38,7 +39,7 @@ export async function copyEntryToClient(
                     false,
                 );
                 if (overwrite == false) {
-                    prompter.write("  Not copied; the destination entry was kept.\n\n");
+                    writeWarning(prompter, "Not copied; the destination entry was kept.");
                     return;
                 }
             }
@@ -56,11 +57,12 @@ export async function copyEntryToClient(
             env: { ...entry.env },
         }, { replace: true });
         if (result.status === "written") {
-            prompter.write(`  ${prompter.paint.success(`Copied ${name} to ${destination.label}`)} ${prompter.paint.dim(result.detail)}\n`);
-            prompter.write(prompter.paint.dim("  Restart the destination client (or reconnect it from its MCP menu) to pick up the change.\n\n"));
+            prompter.write(`  ${prompter.paint.success("Copied")} ${prompter.paint.accent(screenText(name))} to ${prompter.paint.accent(screenText(destination.label))}\n`);
+            writeField(prompter, "Location", result.detail);
+            writeHint(prompter, "Restart or reconnect the destination client to load the change.");
         }
         else {
-            prompter.write(`  Not copied: ${result.detail}\n\n`);
+            prompter.write(`  ${prompter.paint.error("Not copied:")} ${screenText(result.detail)}\n\n`);
         }
         return;
     }

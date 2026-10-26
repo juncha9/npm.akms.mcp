@@ -726,30 +726,32 @@ export class Registry {
     }
 }
 
-type ResultPaint = Pick<RegistrationPrompter["paint"], "success" | "warning" | "error" | "dim" | "bold">;
+type ResultPaint = Pick<RegistrationPrompter["paint"], "success" | "warning" | "error" | "dim" | "bold"> & Partial<Pick<RegistrationPrompter["paint"], "accent">>;
 
 export function formatResults(results: SyncResult[], prefix = "", options: { connectionCount?: number; paint?: ResultPaint; reviewHint?: string } = {}): string {
     const plain = (text: string) => text;
     const paint = options.paint ?? { success: plain, warning: plain, error: plain, dim: plain, bold: plain };
+    const accent = options.paint?.accent ?? paint.bold;
     const safe = (text: string) => text.replace(/[\x00-\x1f\x7f]/g, " ");
     const lines = prefix ? [paint.bold(prefix)] : [];
     const total = options.connectionCount ?? new Set(results.flatMap(item => item.connections ?? [item.name])).size;
-    lines.push(`  Connections: ${total}`);
+    lines.push(`${paint.dim("  Connections: ")}${accent(String(total))}`);
     const updated = results.filter((item) => item.status === "synced" && item.detail === "Applied").length;
     const unchanged = results.filter((item) => item.status === "synced" && item.detail !== "Applied").length;
     const removed = results.filter((item) => item.status === "removed").length;
     const failed = results.filter(item => item.status === "error");
-    lines.push(`  Service entries: ${paint.success(`${updated} updated · ${unchanged} already up to date`)}${removed ? ` · ${paint.success(`${removed} removed`)}` : ""} · ${(failed.length ? paint.error : paint.dim)(`${failed.length} failed`)}`);
+    const count = (value: number, label: string, tone: "success" | "error" | "dim") => value ? `${accent(String(value))} ${paint[tone](label)}` : paint.dim(`0 ${label}`);
+    lines.push(`${paint.dim("  Service entries: ")}${count(updated, "updated", "success")} ${paint.dim("·")} ${count(unchanged, "already up to date", "dim")}${removed ? ` ${paint.dim("·")} ${count(removed, "removed", "success")}` : ""} ${paint.dim("·")} ${count(failed.length, "failed", "error")}`);
     if(!results.length) lines.push(paint.dim("  No shared connections need applying."));
-    if(results.length && results.every(item => item.status === "synced" || item.status === "removed")) lines.push(paint.success("  OK: all service entries are up to date."));
+    if(results.length && results.every(item => item.status === "synced" || item.status === "removed")) lines.push(`${paint.success("  OK:")} ${paint.dim("all service entries are up to date.")}`);
     const waiting = results.filter(item => item.status === "pending");
     for(const kind of KINDS) {
         const runtime = waiting.filter(item => item.kind === kind && item.waitingFor === "runtime");
         const kept = waiting.filter(item => item.kind === kind && item.waitingFor === "session");
         if(!runtime.length && !kept.length) continue;
-        lines.push(`\n${paint.warning(runtime.length ? `Waiting for runtime - ${kind.toUpperCase()}` : `Waiting for ${sessionName(kind)}`)}`);
-        if(runtime.length) lines.push("  Install it from Runtime, then run Sync. Your existing entries keep working.");
-        else lines.push("  Resolve this session entry in Sync. Existing connection entries stay until it is ready.");
+        lines.push(runtime.length ? `\n${paint.warning("Waiting for runtime")} - ${accent(kind.toUpperCase())}` : `\n${paint.warning("Waiting for")} ${accent(sessionName(kind))}`);
+        if(runtime.length) lines.push(paint.dim("  Install it from Runtime, then run Sync. Your existing entries keep working."));
+        else lines.push(paint.dim("  Resolve this session entry in Sync. Existing connection entries stay until it is ready."));
         const retained = new Map<string, { clients: ClientId[]; names: string[] }>();
         for(const client of new Set(kept.map(item => item.client))) {
             const names = [...new Set(kept.filter(item => item.client === client).map(item => item.name))];
@@ -760,7 +762,7 @@ export function formatResults(results: SyncResult[], prefix = "", options: { con
         }
         for(const group of retained.values()) {
             const clients = group.clients.map(client => CLIENT_LABELS[client]).join(" · ");
-            lines.push(paint.dim(`  Kept in ${clients} until ${sessionName(kind)} is applied: ${group.names.map(safe).join(", ")}`));
+            lines.push(`${paint.dim("  Kept in ")}${paint.bold(clients)}${paint.dim(` until ${sessionName(kind)} is applied: `)}${accent(group.names.map(safe).join(", "))}`);
         }
     }
     for(const [heading, rows, color] of [
@@ -771,11 +773,11 @@ export function formatResults(results: SyncResult[], prefix = "", options: { con
         if(!rows.length) continue;
         lines.push(`\n${color(`${heading}:`)}`);
         for(const name of new Set(rows.map((item) => item.name))) {
-            lines.push(`  ${safe(name)}`);
-            for(const row of rows.filter((item) => item.name === name)) lines.push(`    ${row.status === "error" ? paint.error("FAILED ") : ""}${CLIENT_LABELS[row.client]}: ${safe(row.detail)}`);
+            lines.push(`  ${accent(safe(name))}`);
+            for(const row of rows.filter((item) => item.name === name)) lines.push(`    ${row.status === "error" ? paint.error("FAILED ") : ""}${paint.dim(`${CLIENT_LABELS[row.client]}: `)}${safe(row.detail)}`);
         }
     }
-    if(results.some(item => item.status === "conflict")) lines.push(paint.warning(`\n${options.reviewHint ?? "Next: open Sync to compare settings and choose which version to use."}`));
-    if(failed.length) lines.push(paint.error("\nNext: fix the errors above, then run Sync again."));
+    if(results.some(item => item.status === "conflict")) lines.push(paint.dim(`\n${options.reviewHint ?? "Next: open Sync to compare settings and choose which version to use."}`));
+    if(failed.length) lines.push(`${paint.dim("\nNext: ")}${paint.error("fix the errors above")}${paint.dim(", then run ")}${accent("Sync")}${paint.dim(" again.")}`);
     return lines.join("\n");
 }

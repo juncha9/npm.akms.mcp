@@ -1,9 +1,10 @@
 import { Registry, entryHash, entryKind, describeDifferences, sessionName } from "./registry";
-import { compareEntries, descriptionOnly, plainText, visibleField, writeWrapped } from "./comparison";
+import { compareEntries, descriptionOnly, visibleField } from "./comparison";
 import { prepareRuntime } from "./runtime-menu";
 import { standardLaunch } from "./runtime";
 import type { ImportCandidate, SyncResult } from "./registry";
-import { CLIENT_LABELS } from "./types";
+import { CLIENT_LABELS, KINDS, KIND_LABELS } from "./types";
+import { countLabel, screenText, writeField, writeHeading, writeHint, writeWarning } from "./display";
 import type { ClientId, ConfigTarget, McpKind, McpServerEntry } from "./types";
 import { PromptBackError, PromptClosedError, type RegistrationPrompter } from "./prompter";
 import type { SelectItem } from "./prompter";
@@ -18,10 +19,10 @@ function pendingImports(registry: Registry, kind?: McpKind): { names: string[]; 
 export type ManagementMode = "config" | "register" | "sync";
 
 function preview(prompter: RegistrationPrompter, entry: McpServerEntry | null): void {
-    if(!entry) { prompter.write("  Remove this connection from the service.\n"); return; }
+    if(!entry) { writeField(prompter, "Action", "Remove from service", "", "warning"); return; }
     // Arguments may also contain credentials in imported commands. Only env keys and
     // familiar non-secret endpoint fields are shown in a registration/conflict preview.
-    for(const [key, value] of Object.entries(entry.env)) prompter.write(`  ${plainText(key)}: ${visibleField.test(key) ? plainText(value) : "(hidden)"}\n`);
+    for(const [key, value] of Object.entries(entry.env)) writeField(prompter, key, visibleField.test(key) ? value : "(hidden)", "", visibleField.test(key) ? "accent" : "dim");
 }
 
 /** Status lines and the Add guard of each kind's config screen; shared settings live in the AKMS MCP menu. */
@@ -51,17 +52,18 @@ export class ManagedSession {
      */
     writeStatus(prompter: RegistrationPrompter): void {
         const state = this.registry.read();
-        const paint = prompter.paint;
-        if(!process.env.AKMS_MCP_MENU) prompter.write(paint.dim("Register, Sync and Runtime are in the AKMS MCP menu: npx -y @akms/mcp@latest\n"));
-        if(this.registry.needsMigration(state)) prompter.write(paint.warning("! Registry update available. Choose Migrate registry in the AKMS MCP menu.\n"));
-        prompter.write(`${paint.dim("Services")}  ${state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || paint.warning("none")}\n`);
-        if(!state.clients.length) prompter.write(paint.warning("! No AI services registered. Choose Register in the AKMS MCP menu before adding a connection.\n"));
-        if(this.registry.isSessionMode(this.options.kind, state)) prompter.write(`${paint.dim("Server")}    ${paint.accent(sessionName(this.options.kind))} ${paint.dim("· reconnect clients after changing connections")}\n`);
+        const warnings: string[] = [];
+        if(!process.env.AKMS_MCP_MENU) writeField(prompter, "Setup", "npx -y @akms/mcp@latest", "Register · Sync · Runtime");
+        if(this.registry.needsMigration(state)) warnings.push("Registry update available. Open Runtime in the AKMS MCP menu to migrate.");
+        writeField(prompter, "Services", state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || "none", "", state.clients.length ? "accent" : "warning");
+        if(!state.clients.length) warnings.push("No AI services registered. Choose Register in the AKMS MCP menu before adding a connection.");
+        if(this.registry.isSessionMode(this.options.kind, state)) writeField(prompter, "Server", sessionName(this.options.kind), "reconnect clients after changing connections");
         const attention = new Set(this.registry.inspect().filter((item) => this.registry.kindForName(item.name, state) === this.options.kind
             && !["synced", "removed"].includes(item.status)).flatMap(item => item.connections ?? [item.name])).size;
-        if(attention) prompter.write(paint.warning(`! Needs attention: ${attention} connection(s). Open Sync in the AKMS MCP menu.\n`));
+        if(attention) warnings.push(`Needs attention: ${countLabel(attention, "connection")}. Open Sync in the AKMS MCP menu.`);
         const pending = pendingImports(this.registry, this.options.kind).names.length;
-        if(pending) prompter.write(paint.warning(`! Import available: ${pending} connection(s). Open Sync in the AKMS MCP menu.\n`));
+        if(pending) warnings.push(`Import available: ${countLabel(pending, "connection")}. Open Sync in the AKMS MCP menu.`);
+        if(warnings.length) writeWarning(prompter, warnings.join(" "));
     }
 
     decorate(items: SelectItem<string>[]): void {
@@ -92,7 +94,7 @@ export class ManagedSession {
     async handle(action: string, prompter: RegistrationPrompter): Promise<boolean> {
         if(action !== "add") return false;
         if(!this.registry.read().clients.length) {
-            prompter.write("\nRegister an AI service first: choose Register in the AKMS MCP menu, select at least one service, then Apply registration.\n");
+            writeWarning(prompter, "Register an AI service first: choose Register in the AKMS MCP menu, select at least one service, then Apply registration.");
             await prompter.acknowledge();
             return true;
         }
@@ -110,8 +112,9 @@ export async function registrationMenu(prompter: RegistrationPrompter, registry:
     for(;;) {
         try {
             prompter.clearScreen();
-            prompter.write("\nRegister · AI services\nShared by Database, SSH, WSL and S3.\nEnter toggles a service; Apply saves the selection.\nMatching existing connections are imported on Apply; differing settings stay unchanged.\n\n");
-            for(const error of discovered.errors) prompter.write(`  ${error}\n`);
+            writeHeading(prompter, "Register · AI services");
+            writeHint(prompter, "Toggle services, then Apply. Matching connections are imported; differences stay for review.");
+            if(discovered.errors.length) writeWarning(prompter, discovered.errors.join(" "));
             const picked = await prompter.select<string>("Register", [
                 ...registry.targets.filter((target) => target.id !== "registered").map((target) => ({
                     value: target.id, label: `[${selected.has(target.id as ClientId) ? "x" : " "}] ${target.label}`,
@@ -128,32 +131,45 @@ export async function registrationMenu(prompter: RegistrationPrompter, registry:
                 continue;
             }
             const removed = initial.clients.filter((id) => !selected.has(id));
-            const count = Object.values(registry.read().connections).filter((item) => item.entry).length;
+            const current = registry.read();
             const plan = registry.planRegistration([...selected]);
             const importNames = [...new Set(plan.imports.map((entry) => entry.name))];
+            const connections = new Map(Object.entries(current.connections).filter(([, item]) => item.entry).map(([name, item]) => [name, item.kind]));
+            for(const item of plan.imports) connections.set(item.name, item.kind);
+            const kinds = KINDS.filter(kind => [...connections.values()].includes(kind));
+            const sessions = kinds.filter(kind => registry.isSessionMode(kind, current)).map(sessionName);
+            const individuals = [...connections].filter(([, kind]) => !registry.isSessionMode(kind, current)).map(([name]) => name);
+            const imported = new Set(plan.imports.map(item => `${item.client}:${item.name}:${entryHash(item.entry)}`));
+            const retiring = discovered.entries.filter(item => selected.has(item.client) && connections.has(item.name) && registry.isSessionMode(item.kind, current));
+            const owned = (item: ImportCandidate) => imported.has(`${item.client}:${item.name}:${entryHash(item.entry)}`)
+                || (Object.hasOwn(current.connections, item.name) && current.connections[item.name].applied[item.client] === entryHash(item.entry));
+            const replaces = [...new Set(retiring.filter(owned).map(item => item.name))];
+            const kept = [...new Set([...plan.conflicts, ...retiring.filter(item => !owned(item)).map(item => item.name)])];
             prompter.clearScreen();
-            prompter.write("Review registration\n");
-            prompter.write(`\nSelected: ${[...selected].map((id) => CLIENT_LABELS[id]).join(" · ") || "none"}\nApply ${count + importNames.length} shared connection(s) to these services.\n`);
-            if(importNames.length) prompter.write(`Import ${importNames.length} existing connection(s); identical copies become one shared item:\n  ${importNames.join("\n  ")}\n`);
-            if(plan.conflicts.length) prompter.write(`Keep ${plan.conflicts.length} differing connection(s) unchanged until you choose a version:\n  ${plan.conflicts.join("\n  ")}\n`);
-            for(const error of plan.errors) prompter.write(`  ${error}\n`);
+            writeHeading(prompter, "Review registration");
+            writeField(prompter, "Services", [...selected].map((id) => CLIENT_LABELS[id]).join(" · ") || "none");
+            writeField(prompter, "Connections", String(connections.size), kinds.length ? `(${kinds.map(kind => `${KIND_LABELS[kind]} ${[...connections.values()].filter(value => value === kind).length}`).join(" · ")})` : "");
+            writeField(prompter, "Entries", [...sessions, ...(individuals.length ? [`${individuals.length} individual entries`] : [])].join(" · ") || "none", "in each service");
+            if(replaces.length) writeField(prompter, "Replaces", `${replaces.length} individual entries`, `with ${sessions.join(" · ")}`);
+            if(importNames.length) writeField(prompter, "Import", countLabel(importNames.length, "matching connection"));
+            if(kept.length) writeField(prompter, "Kept", `${kept.length} need a version choice`, kept.join(", "), "warning");
+            if(plan.errors.length) writeField(prompter, "Unavailable", countLabel(plan.errors.length, "service"), plan.errors.join(" "), "error");
             if(initial.defaultMode === "catalog") {
-                prompter.write("Services use one session entry per kind. Imported individual entries are removed after that session entry is verified.\n");
-                if(plan.imports.some(item => !registry.globalRuntime(item.kind))) prompter.write("Install missing runtimes from Runtime, then run Sync. Existing entries stay until then.\n");
-                if(plan.imports.some(item => !standardLaunch(item.entry, item.kind))) prompter.write("Custom launch commands are retained for rollback; session mode uses each connection's saved environment.\n");
+                if(plan.imports.some(item => !registry.globalRuntime(item.kind))) writeField(prompter, "Runtime", "Waiting", "install from Runtime, then Sync; existing entries stay", "warning");
+                if(plan.imports.some(item => !standardLaunch(item.entry, item.kind))) writeHint(prompter, "Custom commands stay in the catalog for switching back; session servers use their saved settings.");
             }
-            if(removed.length) prompter.write(`Unregister: ${removed.map((id) => CLIENT_LABELS[id]).join(" · ")}\nRemove only AKMS-managed entries from these services; keep the shared catalog.\n`);
+            if(removed.length) writeField(prompter, "Unregister", removed.map((id) => CLIENT_LABELS[id]).join(" · "), "remove managed entries; keep the catalog");
             if(!privacyNoticeShown) {
-                writeWrapped(prompter, `Connection settings, including passwords, are stored in ${plainText(registry.file)}.`);
-                prompter.write("Keep this file private: do not share, sync or commit it.\n");
-                prompter.write("Its previous revision, registry.previous.json, also contains saved credentials.\n");
+                writeWarning(prompter, `Plaintext passwords: ${registry.file} + registry.previous.json. Do not share, sync or commit.`);
                 privacyNoticeShown = true;
             }
             if(!await prompter.askYesNo("Apply this registration?", removed.length === 0)) continue;
             const results = registry.register([...selected], initial.clients, plan.imports);
             prompter.clearScreen();
-            prompter.write(`\n${registry.formatResults(results, `Registration saved.\n  AI services: ${[...selected].map((id) => CLIENT_LABELS[id]).join(" · ") || "none"}`, prompter.paint)}\n`);
-            if(importNames.length) prompter.write(`Imported ${importNames.length} existing connection(s) into the shared list.\n`);
+            writeHeading(prompter, "Registration saved.");
+            writeField(prompter, "Services", [...selected].map((id) => CLIENT_LABELS[id]).join(" · ") || "none");
+            prompter.write(`${registry.formatResults(results, "", prompter.paint)}\n`);
+            if(importNames.length) writeField(prompter, "Imported", countLabel(importNames.length, "connection"), "saved in the shared catalog", "success");
             try {
                 const conflicts = new Set(results.filter((result) => result.status === "conflict").map((result) => result.name));
                 if(conflicts.size && await prompter.askYesNo(`Compare settings for ${conflicts.size} connection(s) now?`, true)) await syncMenu(prompter, registry);
@@ -161,13 +177,13 @@ export async function registrationMenu(prompter: RegistrationPrompter, registry:
                 const remaining = registry.candidates().entries.filter((candidate) => !Object.hasOwn(current.connections, candidate.name));
                 const names = [...new Set(remaining.map((candidate) => candidate.name))];
                 if(names.length) {
-                    prompter.write(`\n${names.length} existing connection(s) still need a choice before joining the shared list:\n`);
+                    writeField(prompter, "Not imported", countLabel(names.length, "connection"), "choose a version", "warning");
                     for(const name of names) {
                         const copies = remaining.filter((candidate) => candidate.name === name);
-                        prompter.write(`  ${plainText(name)} · ${copies.map((copy) => CLIENT_LABELS[copy.client]).join(" · ")}\n`);
-                        if(new Set(copies.map((copy) => entryHash(copy.entry))).size > 1) prompter.write(`    ${describeDifferences(copies.map((copy) => copy.entry))}\n`);
+                        writeField(prompter, name, copies.map((copy) => CLIENT_LABELS[copy.client]).join(" · "));
+                        if(new Set(copies.map((copy) => entryHash(copy.entry))).size > 1) writeHint(prompter, `  ${describeDifferences(copies.map((copy) => copy.entry))}`);
                     }
-                    prompter.write("Their existing settings are unchanged. Compare them now, or use Import existing connections later.\n");
+                    writeHint(prompter, "Existing settings stay. Compare now or open Import existing connections later.");
                     if(await prompter.askYesNo("Compare existing settings and choose which to share?", true)) await importMenu(prompter, registry);
                 }
                 if(!conflicts.size && !names.length) await prompter.acknowledge();
@@ -180,7 +196,7 @@ export async function registrationMenu(prompter: RegistrationPrompter, registry:
         } catch(error) {
             if(error instanceof PromptClosedError) throw error;
             if(error instanceof PromptBackError) continue;
-            prompter.write(`  ${error instanceof Error ? error.message : "Registration could not be saved."}\n`);
+            writeWarning(prompter, error instanceof Error ? error.message : "Registration could not be saved.");
             await prompter.acknowledge();
         }
     }
@@ -189,9 +205,9 @@ export async function registrationMenu(prompter: RegistrationPrompter, registry:
 export async function importMenu(prompter: RegistrationPrompter, registry: Registry, kind?: McpKind): Promise<void> {
     for(;;) {
         prompter.clearScreen();
-        prompter.write("Import existing connections\n\n");
+        writeHeading(prompter, "Import existing connections");
         const { entries, errors } = registry.candidates(kind);
-        for(const error of errors) prompter.write(`  ${error}\n`);
+        for(const error of errors) writeWarning(prompter, error);
         const state = registry.read();
         const matching = registry.planRegistration(state.clients, kind);
         const matchingNames = [...new Set(matching.imports.map((entry) => entry.name))];
@@ -199,7 +215,8 @@ export async function importMenu(prompter: RegistrationPrompter, registry: Regis
             const current = Object.hasOwn(state.connections, candidate.name) ? state.connections[candidate.name] : undefined;
             return !current?.entry || current.applied[candidate.client] !== entryHash(candidate.entry) || entryHash(current.entry) !== entryHash(candidate.entry);
         }).map((entry) => entry.name))];
-        if(!names.length) { prompter.write("  No existing connections need importing.\n"); await prompter.acknowledge(); return; }
+        if(!names.length) { writeHint(prompter, "No existing connections need importing."); await prompter.acknowledge(); return; }
+        writeField(prompter, "Available", countLabel(names.length, "connection"), `${matchingNames.length} matching`);
         const picked = await prompter.select("Import existing connections", [
             ...names.map((name) => ({ value: `entry:${name}`, key: name, label: name, hint: [...new Set(entries.filter((entry) => entry.name === name).map((entry) => CLIENT_LABELS[entry.client]))].join(" · ") })),
             ...(matchingNames.length ? [{ value: "matching", key: "all", label: "Import all matching connections", hint: `${matchingNames.length} connections; differing versions stay unchanged` }] : []),
@@ -209,7 +226,9 @@ export async function importMenu(prompter: RegistrationPrompter, registry: Regis
         try {
             prompter.clearScreen();
             if(picked === "matching") {
-                prompter.write(`\nImport existing connections:\n  ${matchingNames.join("\n  ")}\n`);
+                writeHeading(prompter, "Review import");
+                writeField(prompter, "Connections", String(matchingNames.length), matchingNames.join(", "));
+                writeField(prompter, "Services", state.clients.map(client => CLIENT_LABELS[client]).join(" · ") || "none");
                 if(await prompter.askYesNo("Import matching connections and apply them?", true)) {
                     const results = registry.register(state.clients, state.clients, matching.imports);
                     prompter.clearScreen();
@@ -222,7 +241,8 @@ export async function importMenu(prompter: RegistrationPrompter, registry: Regis
             const candidates = entries.filter((entry) => entry.name === name);
             let chosen: ImportCandidate = candidates[0];
             if(new Set(candidates.map((candidate) => entryHash(candidate.entry))).size > 1) {
-                prompter.write(`\n${plainText(name)} · Choose the settings to use on all registered services.\n`);
+                writeHeading(prompter, `Compare ${name}`);
+                writeField(prompter, "Services", state.clients.map(client => CLIENT_LABELS[client]).join(" · ") || "none");
                 compareEntries(prompter, candidates.map((candidate) => ({ label: CLIENT_LABELS[candidate.client], entry: candidate.entry })));
                 const choice = await prompter.select("Use settings from", [
                     ...candidates.map((candidate, index) => ({ value: String(index), label: `Use ${index + 1}: ${CLIENT_LABELS[candidate.client]}` })),
@@ -231,19 +251,21 @@ export async function importMenu(prompter: RegistrationPrompter, registry: Regis
                 if(choice === "back") continue;
                 chosen = candidates[Number(choice)];
             }
+            writeField(prompter, "Connection", name);
+            writeField(prompter, "Version", CLIENT_LABELS[chosen.client]);
             preview(prompter, chosen.entry);
             const destination = await prompter.askRequired("Shared connection name (change it to keep both)", name);
-            prompter.write("The selected version will be used by every registered service.\n");
+            writeField(prompter, "Apply to", state.clients.map(client => CLIENT_LABELS[client]).join(" · ") || "none");
             if(!await prompter.askYesNo(`Import ${destination} and apply it?`, true)) continue;
             const results = registry.importEntry(destination, chosen, candidates);
             prompter.clearScreen();
             prompter.write(`\n${registry.formatResults(results, "Import complete", prompter.paint)}\n`);
-            if(destination !== name) prompter.write("  The original entries were kept under their old name.\n");
+            if(destination !== name) writeField(prompter, "Kept", name, "original entries retain this name", "warning");
             await prompter.acknowledge();
         } catch(error) {
             if(error instanceof PromptClosedError) throw error;
             if(error instanceof PromptBackError) continue;
-            prompter.write(`  ${error instanceof Error ? error.message : "Import failed."}\n`);
+            writeWarning(prompter, error instanceof Error ? error.message : "Import failed.");
             await prompter.acknowledge();
         }
     }
@@ -257,7 +279,7 @@ export async function syncMenu(prompter: RegistrationPrompter, registry: Registr
         pendingResults = undefined;
         prompter.write(`\n${registry.formatResults(results, "Sync results", prompter.paint, "Next: choose an item below to compare settings and pick a version.")}\n`);
         const imports = pendingImports(registry);
-        if(imports.names.length) prompter.write(prompter.paint.warning(`\nNot yet imported: ${imports.names.length} connection(s)${imports.differing === imports.names.length ? " with differing settings" : ""} - open Import existing connections.\n`));
+        if(imports.names.length) writeField(prompter, "Not imported", countLabel(imports.names.length, "connection"), `${imports.differing === imports.names.length ? "different settings · " : ""}choose Import existing connections`, "warning");
         const conflicts = results.filter((result) => result.status === "conflict");
         if(!conflicts.length && !imports.names.length) { await prompter.acknowledge(); return; }
         const picked = await prompter.select("Review differences", [
@@ -276,12 +298,14 @@ export async function syncMenu(prompter: RegistrationPrompter, registry: Registr
                 const session = state.sessions![sessionKind]!;
                 const actual = registry.targets.find(target => target.id === conflict.client)?.readEntries()[conflict.name];
                 if(!actual || entryKind(actual) !== sessionKind) {
-                    prompter.write("This session name belongs to an unsupported or different server. Rename the external entry manually; it was kept.\n");
+                    writeWarning(prompter, "This name belongs to another server. Rename its external entry; existing settings stay.");
                     await prompter.acknowledge(); continue;
                 }
                 const removing = !registry.isSessionMode(sessionKind, state) || !state.clients.includes(conflict.client)
                     || !Object.values(state.connections).some(item => item.kind === sessionKind && item.entry);
-                writeWrapped(prompter, `Session server / ${conflict.name} / ${CLIENT_LABELS[conflict.client]}`);
+                writeHeading(prompter, "Review session launch");
+                writeField(prompter, "Server", conflict.name);
+                writeField(prompter, "Service", CLIENT_LABELS[conflict.client]);
                 compareEntries(prompter, [{ label: "AKMS session launch", entry: session.entry }, { label: "External settings", entry: actual }]);
                 const choice = await prompter.select("Resolve session launch", [
                     { value: "apply", label: removing ? "Remove the old session entry" : "Restore the AKMS session launch" },
@@ -294,7 +318,7 @@ export async function syncMenu(prompter: RegistrationPrompter, registry: Registr
             if(!connection) throw new Error("This connection changed. Reopen Sync to review its current settings.");
             const actual = registry.targets.find((target) => target.id === conflict.client)?.readEntries()[conflict.name];
             if(!actual || entryKind(actual) !== connection.kind) {
-                prompter.write("  This name belongs to a different or unsupported server. Rename that entry manually, or rename the shared connection.\n");
+                writeWarning(prompter, "This name belongs to another server. Rename that entry or the shared connection.");
                 await prompter.acknowledge();
                 continue;
             }
@@ -304,19 +328,19 @@ export async function syncMenu(prompter: RegistrationPrompter, registry: Registr
             const removing = !connection.entry || !registered;
             const retiring = sessionMode && !removing;
             const subject = connection.entry && descriptionOnly([connection.entry, actual]) ? "description" : "settings";
-            writeWrapped(prompter, `Sync / ${plainText(conflict.name)}`);
-            writeWrapped(prompter, `Registered services: ${state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || "none"}`);
+            writeHeading(prompter, `Sync / ${conflict.name}`);
+            writeField(prompter, "Services", state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || "none");
             prompter.write("\n");
             if(!removing && connection.entry) {
                 if(retiring) {
-                    writeWrapped(prompter, `Choose settings for ${sessionName(connection.kind)} before removing the old ${client} entry.`);
-                    writeWrapped(prompter, "The old entry stays until the session server is ready.");
+                    writeField(prompter, "Server", sessionName(connection.kind));
+                    writeField(prompter, "Kept in", client, "old entry stays until this server is ready", "warning");
                 }
                 compareEntries(prompter, [{ label: "Saved in AKMS", entry: connection.entry }, { label: `Currently in ${client}`, entry: actual }]);
             } else {
-                writeWrapped(prompter, !registered ? `${client} is no longer registered.` : sessionMode ? `This kind now uses ${sessionName(connection.kind)}. The individual client entry is no longer needed.` : "This connection was removed from AKMS.");
-                writeWrapped(prompter, `Its settings in ${client} changed before removal could finish.`);
-                prompter.write(`\nCurrently in ${client}\n`); preview(prompter, actual);
+                writeField(prompter, "Action", !registered ? `${client} unregistered` : "Remove connection", "", "warning");
+                writeHint(prompter, `Settings changed in ${client}; choose what to keep.`);
+                writeHeading(prompter, `Currently in ${client}`); preview(prompter, actual);
                 prompter.write("\n");
             }
             const choices: SelectItem<string>[] = [
@@ -328,10 +352,10 @@ export async function syncMenu(prompter: RegistrationPrompter, registry: Registr
             if(choice === "back") continue;
             prompter.write("\n");
             if(choice === "client") {
-                writeWrapped(prompter, `Save the ${client} version in AKMS.`);
-                writeWrapped(prompter, `Sync to: ${state.clients.map((id) => CLIENT_LABELS[id]).join(" · ")}`);
-            } else writeWrapped(prompter, removing ? `Remove ${plainText(conflict.name)} from ${client}.` : retiring ? `Keep the saved AKMS ${subject}.` : `Copy the saved AKMS ${subject} to ${client}.`);
-            if(retiring) writeWrapped(prompter, `Keep the old ${client} entry until ${sessionName(connection.kind)} is ready, then remove it.`);
+                writeField(prompter, "Save version", client, "in AKMS");
+                writeField(prompter, "Apply to", state.clients.map((id) => CLIENT_LABELS[id]).join(" · "));
+            } else writeField(prompter, removing ? "Remove" : "Keep version", removing ? `${conflict.name} in ${client}` : "AKMS", removing ? "" : retiring ? `for ${sessionName(connection.kind)}` : `apply ${subject} to ${client}`);
+            if(retiring) writeHint(prompter, `The old ${client} entry stays until ${sessionName(connection.kind)} is ready.`);
             const confirmation = choice === "client" ? `Save in AKMS and sync ${state.clients.length} services?`
                 : removing ? `Remove from ${client}?` : retiring ? "Keep version 1 and finish Sync?" : `Update ${client} with version 1?`;
             if(await prompter.askYesNo(confirmation, false)) {
@@ -340,7 +364,7 @@ export async function syncMenu(prompter: RegistrationPrompter, registry: Registr
         } catch(error) {
             if(error instanceof PromptClosedError) throw error;
             if(error instanceof PromptBackError) continue;
-            prompter.write(`  ${error instanceof Error ? error.message : "Could not resolve the difference."}\n`);
+            prompter.write(`${prompter.paint.error("Failed")} ${screenText(error instanceof Error ? error.message : "Could not resolve the difference.")}\n`);
             await prompter.acknowledge();
         }
     }

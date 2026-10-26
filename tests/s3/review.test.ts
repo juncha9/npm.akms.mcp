@@ -139,7 +139,7 @@ describe("review regressions", () => {
         });
         input.end(["connection", "e", "aws", "", "us-east-1", "default", "", "n", "", "", "n", "save", "q"].join("\n") + "\n");
         await runConfigCommand({ input, output, targets: [target] });
-        expect(screen).toContain("changed while the form was open");
+        expect(screen).toContain("This connection changed. Reload it before editing; nothing was saved.");
         expect(target.writeEntry).not.toHaveBeenCalled();
         expect(current).toEqual(changed);
     });

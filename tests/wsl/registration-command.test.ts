@@ -86,11 +86,11 @@ describe("standalone wsl registration", () => {
         const existing = { command: "npx", args: ["-y", "@akms/mcp-wsl"], env: {} };
         for(const target of values.targets) target.writeEntry("legacy-connection", existing);
         const originals = values.targets.map((target) => fs.readFileSync(target.location, "utf8"));
-        // Register lives in the AKMS MCP menu; `akms-mcp-wsl register` opens the same screen.
+        // Register lives in the AKMS MCP menu; `npx -y @akms/mcp@latest wsl register` opens the same screen.
         const registered = await run(values, ["cursor", "claude-desktop", "a", "y"], "register");
         const text = registered + await run(values, ["q"]);
         expect(Object.keys(values.registry.target("wsl").readEntries())).toEqual(["legacy-connection"]);
-        expect(text).toContain("Imported 1 existing connection(s)");
+        expect(text).toMatch(/Imported\s+1 connection\s+saved in the shared catalog/);
         expect(text).toContain("legacy-connection");
         expect(text).not.toContain("Switch client");
         values.targets.forEach((target, index) => expect(fs.readFileSync(target.location, "utf8")).toBe(originals[index]));
@@ -101,7 +101,7 @@ describe("standalone wsl registration", () => {
         values.targets[0].writeEntry("legacy-connection", existing);
         const before = fs.readFileSync(values.targets[0].location, "utf8");
         const text = await run(values, ["a", "q"]);
-        expect(text).toContain("Register, Sync and Runtime are in the AKMS MCP menu");
+        expect(text).toMatch(/Setup\s+npx -y @akms\/mcp@latest\s+Register · Sync · Runtime/);
         expect(text).toContain("Choose Register in the AKMS MCP menu");
         expect(text).not.toContain("Import existing connections");
         expect(text).toContain("Register an AI service first");

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Writable } from "node:stream";
+import { writeField, writeFormHelp, writeWarning } from "@/modules/registration/display";
 
 import { DEFAULT_SSH_PORT } from "@ssh/_defs";
 import { expandHomePath } from "@ssh/_libs";
@@ -189,7 +190,7 @@ async function askPort(prompter: Prompter, question: string, current: number): P
             return parsed;
         }
 
-        prompter.write("  Enter a port number between 1 and 65535.\n");
+        writeWarning(prompter, "Enter a port number between 1 and 65535.");
     }
 }
 
@@ -257,7 +258,7 @@ async function askKeyPath(prompter: Prompter, current: string | undefined): Prom
             return typed;
         }
 
-        prompter.write(`  ${expandHomePath(typed)} does not exist.\n`);
+        writeWarning(prompter, `${expandHomePath(typed)} does not exist.`);
         const useAnyway = await prompter.askYesNo("Use this path anyway?", false);
         if (useAnyway == true) {
             return typed;
@@ -560,11 +561,11 @@ async function testConnection(prompter: Prompter, output: Writable, state: FormS
         && state.answers.hostKeyFingerprint != null
         && result.hostKeyFingerprint !== state.answers.hostKeyFingerprint;
     if (hostKeyChanged == true) {
-        output.write("  The host presented a different key than the pinned one. Re-pin only if you know it was rebuilt.\n");
+        writeWarning(prompter, "The host presented a different key than the pinned one. Re-pin only if you know it was rebuilt.");
         const repin = await prompter.askYesNo(`Pin ${result.hostKeyFingerprint} instead?`, false);
         if (repin == true) {
             state.answers.hostKeyFingerprint = result.hostKeyFingerprint ?? undefined;
-            output.write("  Pinned the new key — test again to confirm.\n");
+            output.write("  " + prompter.paint.success("Pinned the new key") + prompter.paint.dim(" — test again to confirm.") + "\n");
         }
     }
 
@@ -572,11 +573,11 @@ async function testConnection(prompter: Prompter, output: Writable, state: FormS
         && state.answers.jumpHostKeyFingerprint != null
         && result.jumpHostKeyFingerprint !== state.answers.jumpHostKeyFingerprint;
     if (jumpKeyChanged == true) {
-        output.write("  The jump host presented a different key than the pinned one. Re-pin only if you know it was rebuilt.\n");
+        writeWarning(prompter, "The jump host presented a different key than the pinned one. Re-pin only if you know it was rebuilt.");
         const repin = await prompter.askYesNo(`Pin ${result.jumpHostKeyFingerprint} instead?`, false);
         if (repin == true) {
             state.answers.jumpHostKeyFingerprint = result.jumpHostKeyFingerprint ?? undefined;
-            output.write("  Pinned the new key — test again to confirm.\n");
+            output.write("  " + prompter.paint.success("Pinned the new key") + prompter.paint.dim(" — test again to confirm.") + "\n");
         }
     }
 
@@ -629,7 +630,7 @@ async function editField(prompter: Prompter, output: Writable, state: FormState,
                 state.nameTouched = true;
                 return;
             }
-            prompter.write("  Use letters, digits, '-' and '_' only (max 48) — the name becomes part of every tool name.\n");
+            writeWarning(prompter, "Use letters, digits, '-' and '_' only (max 48) — the name becomes part of every tool name.");
         }
     }
 
@@ -705,7 +706,7 @@ async function editField(prompter: Prompter, output: Writable, state: FormState,
     }
 
     if (id === "proxy") {
-        output.write(prompter.paint.dim("  %h / %p / %r expand to the first hop's host, port and user.\n"));
+        writeField(prompter, "Expansions", "%h / %p / %r", "first-hop host / port / user");
         answers.proxyCommand = await prompter.askRequired("Proxy command", answers.proxyCommand ?? "cloudflared access ssh --hostname %h");
         return;
     }
@@ -753,7 +754,7 @@ async function editField(prompter: Prompter, output: Writable, state: FormState,
 
     const missing = missingFields(state);
     if (missing.length > 0) {
-        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first — the key is pinned by testing the connection.\n`);
+        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first — the key is pinned by testing the connection.`);
         return;
     }
 
@@ -823,7 +824,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
         title = `Editing ${existing.name}`;
     }
 
-    output.write(prompter.paint.dim(`\n  Pick a setting to change it. In a text field, Enter keeps the value shown and ${CLEAR_ANSWER} clears it.\n\n`));
+    writeFormHelp(prompter, CLEAR_ANSWER);
 
     const previousTransient = prompter.transient;
     prompter.transient = true;
@@ -856,7 +857,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
                 // (2) Test
                 if (picked === "test") {
                     if (missing.length > 0) {
-                        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.\n`);
+                        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.`);
                         cursor = missing[0];
                         continue;
                     }
@@ -872,7 +873,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
                 // (3) Save
                 if (picked === "save") {
                     if (missing.length > 0) {
-                        output.write(`  Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.\n`);
+                        writeWarning(prompter, `Fill in ${missing.map((field) => FIELD_NAMES[field]).join(", ")} first.`);
                         cursor = missing[0];
                         continue;
                     }

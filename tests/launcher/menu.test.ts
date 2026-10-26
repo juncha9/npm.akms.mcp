@@ -124,6 +124,7 @@ describe("unified menu", () => {
         else expect(fs.readFileSync(file, "utf8")).toBe(original);
     });
     it("marks an older runtime beside Runtime in color, offers no Updates row and opens Runtime", async () => {
+        vi.stubEnv("NO_COLOR", undefined);
         const terminal = createTerminal();
         const launch = vi.fn(async () => 0);
         const runtimeOptions: Registry["runtimeOptions"] = { find: () => ({ command: process.execPath, args: [path.join(directory, "db.js")], version: "0.0.1", linked: false }) };

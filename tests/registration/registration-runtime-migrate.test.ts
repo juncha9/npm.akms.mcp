@@ -101,6 +101,7 @@ describe("Migrate registry inside Runtime", () => {
         expect(runtimeNotice(registry).notice).toBe("Registry update blocked");
     });
     it("draws the destination version in green on a terminal", async () => {
+        vi.stubEnv("NO_COLOR", undefined);
         const { registry, install } = fixture(); install("0.4.0");
         const input = Object.assign(new PassThrough(), { isTTY: true, setRawMode: () => {} });
         const output = Object.assign(new PassThrough(), { isTTY: true, columns: 100 });

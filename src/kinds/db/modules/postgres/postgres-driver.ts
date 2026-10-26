@@ -4,16 +4,16 @@ import { once } from "node:events";
 import type { Duplex } from "node:stream";
 import pg from "pg";
 import Cursor from "pg-cursor";
-import { APPLICATION_NAME, POOL_IDLE_TIMEOUT_MS, POOL_MAX_CLIENTS, TCP_KEEPALIVE_INITIAL_DELAY_MS } from "@/_defs";
-import type { DbProfile, ExecuteResult, ParsedStatement, ResultField, StatementResult, TransactionMode } from "@/_types";
-import { $logger } from "@/_libs/logger";
-import { describeError } from "@/_libs/text";
-import { GuardRejectionError } from "@/modules/guard/guard-error";
-import { parseStatementsWithParser } from "@/modules/guard/parse";
-import { SqlParser } from "@/modules/guard/sql-parser";
-import { changesSchema, checkStatements, writesData } from "@/modules/guard/rules";
-import { ChannelSocket } from "@/modules/tunnel/channel-socket";
-import { SshTunnel } from "@/modules/tunnel/ssh-tunnel";
+import { APPLICATION_NAME, POOL_IDLE_TIMEOUT_MS, POOL_MAX_CLIENTS, TCP_KEEPALIVE_INITIAL_DELAY_MS } from "@db/_defs";
+import type { DbProfile, ExecuteResult, ParsedStatement, ResultField, StatementResult, TransactionMode } from "@db/_types";
+import { $logger } from "@db/_libs/logger";
+import { describeError } from "@db/_libs/text";
+import { GuardRejectionError } from "@db/modules/guard/guard-error";
+import { parseStatementsWithParser } from "@db/modules/guard/parse";
+import { SqlParser } from "@db/modules/guard/sql-parser";
+import { changesSchema, checkStatements, writesData } from "@db/modules/guard/rules";
+import { ChannelSocket } from "@db/modules/tunnel/channel-socket";
+import { SshTunnel } from "@db/modules/tunnel/ssh-tunnel";
 
 /**
  * Types handed back as the server's own text instead of a JS value: `pg` turns `timestamp`

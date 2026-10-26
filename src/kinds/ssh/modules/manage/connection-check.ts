@@ -1,9 +1,9 @@
 import type { Writable } from "node:stream";
 
-import { SINGLE_HOST_ENV } from "@/_defs";
-import type { SshHostProfile } from "@/_types";
-import { loadHostProfile } from "@/modules/config";
-import { SshConnection } from "@/modules/ssh";
+import { SINGLE_HOST_ENV } from "@ssh/_defs";
+import type { SshHostProfile } from "@ssh/_types";
+import { loadHostProfile } from "@ssh/modules/config";
+import { SshConnection } from "@ssh/modules/ssh";
 import { CheckProgress } from "./check-progress";
 
 export interface ConnectionCheckResult {

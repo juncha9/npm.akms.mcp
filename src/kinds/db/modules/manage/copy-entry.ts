@@ -1,4 +1,4 @@
-import type { ConfigTarget, McpServerEntry } from "@/_types";
+import type { ConfigTarget, McpServerEntry } from "@db/_types";
 import { PromptBackError, Prompter } from "./prompter";
 import type { SelectItem } from "./prompter";
 

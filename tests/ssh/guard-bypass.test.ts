@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { inspectCommand, inspectLocalPath, inspectWorkingDirectory } from "@/modules/guard";
-import { buildRemoteCommand } from "@/modules/ssh";
+import { inspectCommand, inspectLocalPath, inspectWorkingDirectory } from "@ssh/modules/guard";
+import { buildRemoteCommand } from "@ssh/modules/ssh";
 
 import { createPolicy, denyPatterns } from "./_helpers";
 

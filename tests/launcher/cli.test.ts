@@ -33,7 +33,7 @@ async function runCli(options: { argumentsList: string[]; input?: string; enviro
     const child = spawn(process.execPath, [process.env.AKMS_TEST_BUILT_CLI ?? resolve("lib/cli.js"), ...options.argumentsList], {
         env: {
             ...environment,
-            npm_execpath: resolve("tests/fixtures/npm-cli.js"),
+            npm_execpath: resolve("tests/launcher/fixtures/npm-cli.js"),
             AKMS_TEST_RECORD: record,
             AKMS_TEST_RUNTIME_RECORD: runtimeRecord,
             AKMS_MCP_HOME: directory,
@@ -76,7 +76,7 @@ describe("built CLI process boundary", () => {
         expect(help.output).toContain("akms-mcp [setup|config]");
         expect(help.calls).toEqual([]);
         const version = await runCli({ argumentsList: ["--version"] });
-        const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+        const manifest = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
         expect(version.output.trim()).toBe(manifest.version);
         expect(version.calls).toEqual([]);
     }, 20_000);

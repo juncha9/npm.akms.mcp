@@ -1,4 +1,4 @@
-import type { SshHostProfile, SshPolicy } from "@/_types";
+import type { SshHostProfile, SshPolicy } from "@ssh/_types";
 
 /**
  * Shared fixtures. Not a `*.test.ts` file, so vitest does not collect it — the five

@@ -1,13 +1,13 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerFileTools } from "../src/modules/tools/file-tools";
-import type { ToolContext } from "../src/modules/tools/tool-context";
-import { inspectWslPath } from "../src/modules/guard";
+import { registerFileTools } from "@wsl/modules/tools/file-tools";
+import type { ToolContext } from "@wsl/modules/tools/tool-context";
+import { inspectWslPath } from "@wsl/modules/guard";
 import { createProfile } from "./_helpers";
 
 const transfer = vi.hoisted(() => vi.fn(async () => 0));
-vi.mock("../src/modules/wsl", async (original) => ({ ...await original<typeof import("../src/modules/wsl")>(), uploadFile: transfer, downloadFile: transfer }));
+vi.mock("@wsl/modules/wsl", async (original) => ({ ...await original<typeof import("@wsl/modules/wsl")>(), uploadFile: transfer, downloadFile: transfer }));
 afterEach(() => { vi.unstubAllEnvs(); transfer.mockClear(); });
 
 describe("catalog transfer security evidence with the installed SSH guard", () => {

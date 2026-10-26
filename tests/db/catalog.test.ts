@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createDbMcpServer, type DbMcpServerInstance } from "@/server";
+import { createDbMcpServer, type DbMcpServerInstance } from "@db/server";
 import { startPgliteServer, type PgliteServer } from "./support/pglite-server";
 
 // db_schemas / db_tables / db_describe against a schema built to hit each catalog corner:

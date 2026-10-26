@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { $logger, expandHomePath, formatBytes } from "@/_libs";
-import { GuardRejectionError, inspectLocalPath } from "@/modules/guard";
-import { downloadFile, listDirectory, readFile, uploadFile, writeFile } from "@/modules/wsl";
+import { $logger, expandHomePath, formatBytes } from "@wsl/_libs";
+import { GuardRejectionError, inspectLocalPath } from "@wsl/modules/guard";
+import { downloadFile, listDirectory, readFile, uploadFile, writeFile } from "@wsl/modules/wsl";
 
 import { formatDirectoryListing } from "./format";
 import { resolveHost, textResult, toToolError } from "./tool-context";

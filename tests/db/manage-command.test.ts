@@ -7,11 +7,11 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 import ssh2 from "ssh2";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConfigTarget, McpServerEntry } from "@/_types";
-import { runTargetConfigCommand as runConfigCommand } from "@/modules/manage";
-import { profileFromEnv, runConnectionCheck } from "@/modules/manage/connection-check";
-import { createJsonFileTarget } from "@/modules/manage/targets/json-file";
-import { toHostKeyFingerprint } from "@/modules/tunnel/ssh-tunnel";
+import type { ConfigTarget, McpServerEntry } from "@db/_types";
+import { runTargetConfigCommand as runConfigCommand } from "@db/modules/manage";
+import { profileFromEnv, runConnectionCheck } from "@db/modules/manage/connection-check";
+import { createJsonFileTarget } from "@db/modules/manage/targets/json-file";
+import { toHostKeyFingerprint } from "@db/modules/tunnel/ssh-tunnel";
 import { startPgliteServer, type PgliteServer } from "./support/pglite-server";
 
 // The whole `config` command driven over scripted stdin, against a real PostgreSQL backend

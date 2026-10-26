@@ -1,12 +1,12 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkStartup, checkConnections, redactStartupText } from "../src/modules/registration/startup-check";
-import { Prompter } from "../src/modules/registration/prompter";
-import type { McpServerEntry } from "../src/modules/registration/types";
+import { checkStartup, checkConnections, redactStartupText } from "@/modules/registration/startup-check";
+import { Prompter } from "@/modules/registration/prompter";
+import type { McpServerEntry } from "@/modules/registration/types";
 
 let directory: string;
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms startup ")); });

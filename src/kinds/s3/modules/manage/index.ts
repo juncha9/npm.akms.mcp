@@ -1,11 +1,11 @@
-import { launchCommand, launchKind } from "../registration/runtime";
-import type { Registry } from "../registration/registry";
-import { RegistryError } from "../registration/registry";
-import { ManagedSession } from "../registration/menu";
-import type { ManagementMode } from "../registration/menu";
+import { launchCommand, launchKind } from "@/modules/registration/runtime";
+import type { Registry } from "@/modules/registration/registry";
+import { RegistryError } from "@/modules/registration/registry";
+import { ManagedSession } from "@/modules/registration/menu";
+import type { ManagementMode } from "@/modules/registration/menu";
 import type { Readable, Writable } from "node:stream";
 import { isDeepStrictEqual } from "node:util";
-import type { ConfigTarget, McpServerEntry } from "@/_types";
+import type { ConfigTarget, McpServerEntry } from "@s3/_types";
 import { ConfigError, loadS3Profile, SERVER_VERSION } from "../../profile";
 import { copyEntryToClient } from "./copy-entry";
 import { PromptBackError, PromptClosedError, Prompter, type SelectItem } from "./prompter";
@@ -120,7 +120,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 prompter.clearScreen();
                 if(options.management && await options.management.handle(selected, prompter)) continue;
                 if(selected === "client") {
-                    const id = await prompter.select("Client", targets.map((item) => ({ value: item.id, label: item.label, hint: item.location })), { defaultValue: target.id });
+                    const id: string = await prompter.select("Client", targets.map((item) => ({ value: item.id, label: item.label, hint: item.location })), { defaultValue: target.id });
                     target = targets.find((item) => item.id === id)!;
                 } else if(selected === "add") await form(prompter, options.output, target, undefined, undefined, options.management);
                 else if(selected.startsWith("entry:")) {

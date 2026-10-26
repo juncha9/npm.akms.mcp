@@ -1,10 +1,11 @@
+#!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { DB_ENV, LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS } from "@/_defs";
-import type { DbProfile } from "@/_types";
-import { $logger } from "@/_libs/logger";
-import { describeError } from "@/_libs/text";
-import { runConfigCommand, runConnectionCheck } from "@/modules/manage";
-import { loadDbProfile } from "@/modules/profile";
+import { DB_ENV, LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS } from "@db/_defs";
+import type { DbProfile } from "@db/_types";
+import { $logger } from "@db/_libs/logger";
+import { describeError } from "@db/_libs/text";
+import { runConfigCommand, runConnectionCheck } from "@db/modules/manage";
+import { loadDbProfile } from "@db/modules/profile";
 import { createDbCatalogServer, createDbMcpServer } from "./server";
 
 const HELP_TEXT = [

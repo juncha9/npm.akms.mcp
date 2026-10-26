@@ -1,15 +1,15 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Registry, entryKind } from "../src/modules/registration/registry";
-import { findGlobalRuntime, installGlobalRuntime, standardLaunch, runtimePrefix, runtimeRoot, runtimeIsOlder, npmCli } from "../src/modules/registration/runtime";
-import type { GlobalRuntime } from "../src/modules/registration/runtime";
-import { prepareRuntime, runtimeMenu } from "../src/modules/registration/runtime-menu";
-import { Prompter } from "../src/modules/manage/prompter";
-import { createJsonFileTarget } from "../src/modules/manage/targets/json-file";
+import { Registry, entryKind } from "@/modules/registration/registry";
+import { findGlobalRuntime, installGlobalRuntime, standardLaunch, runtimePrefix, runtimeRoot, runtimeIsOlder, npmCli } from "@/modules/registration/runtime";
+import type { GlobalRuntime } from "@/modules/registration/runtime";
+import { prepareRuntime, runtimeMenu } from "@/modules/registration/runtime-menu";
+import { Prompter } from "@db/modules/manage/prompter";
+import { createJsonFileTarget } from "@db/modules/manage/targets/json-file";
 
 let directory: string;
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms runtime ")); vi.stubEnv("AKMS_MCP_HOME", directory); fs.writeFileSync(path.join(directory, "registry.json"), JSON.stringify({ version: 1, clients: [], connections: {} })); });

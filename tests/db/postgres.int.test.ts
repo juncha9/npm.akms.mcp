@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { loadDbProfile } from "@/modules/profile";
-import { describeRelation, listRelations } from "@/modules/postgres/catalog";
-import { PostgresDriver, StatementError } from "@/modules/postgres/postgres-driver";
+import { loadDbProfile } from "@db/modules/profile";
+import { describeRelation, listRelations } from "@db/modules/postgres/catalog";
+import { PostgresDriver, StatementError } from "@db/modules/postgres/postgres-driver";
 
 // Runs against a real PostgreSQL only when MCP_DB_TEST_URL is set. Everything it creates is a
 // TEMP table — gone when the session ends — so it is safe on a shared test database.

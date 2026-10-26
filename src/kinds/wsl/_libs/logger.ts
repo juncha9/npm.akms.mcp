@@ -1,4 +1,4 @@
-import { LOG_LEVEL_ENV } from "@/_defs";
+import { LOG_LEVEL_ENV } from "@wsl/_defs";
 
 export type LogLevel = "silent" | "debug" | "info" | "warn" | "error";
 

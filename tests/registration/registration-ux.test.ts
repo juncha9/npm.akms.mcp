@@ -4,12 +4,12 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 import { stripVTControlCharacters } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Registry, formatResults } from "../src/modules/registration/registry";
-import { ManagedSession, registrationMenu, syncMenu } from "../src/modules/registration/menu";
-import { compareEntries } from "../src/modules/registration/comparison";
-import { Prompter, displayWidth } from "../src/modules/registration/prompter";
-import type { ConfigTarget, McpServerEntry } from "../src/modules/registration/types";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { Registry, formatResults } from "@/modules/registration/registry";
+import { ManagedSession, registrationMenu, syncMenu } from "@/modules/registration/menu";
+import { compareEntries } from "@/modules/registration/comparison";
+import { Prompter, displayWidth } from "@/modules/registration/prompter";
+import type { ConfigTarget, McpServerEntry } from "@/modules/registration/types";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 
 let directory: string;
 beforeEach(() => {

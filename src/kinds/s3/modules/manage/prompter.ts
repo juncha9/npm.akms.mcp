@@ -1,27 +1,7 @@
 import type { Readable, Writable } from "node:stream";
+import { PromptBackError, PromptClosedError } from "@/modules/prompt-errors";
 
-/**
- * Input ended before a prompt was answered — Ctrl+D, Ctrl+C, or a piped script running out.
- * The `config` loop treats it as leaving, not as a failure.
- */
-export class PromptClosedError extends Error {
-    constructor() {
-        super("input closed before the prompt was answered");
-        this.name = "PromptClosedError";
-    }
-}
-
-/**
- * Esc was pressed in a prompt that has no cancel value of its own — "back one level". The
- * caller decides what the level above is: the form puts the setting back as it was, a
- * confirmation returns to the menu that opened it.
- */
-export class PromptBackError extends Error {
-    constructor() {
-        super("esc pressed — back one level");
-        this.name = "PromptBackError";
-    }
-}
+export { PromptBackError, PromptClosedError };
 
 export interface SelectChoice<T extends string> {
     value: T;

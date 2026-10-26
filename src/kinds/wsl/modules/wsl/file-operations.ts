@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { MAX_DIRECTORY_ENTRIES } from "@/_defs";
-import { quoteShellArgument } from "@/_libs";
-import type { WslDirectoryEntry } from "@/_types";
-import { GuardRejectionError, inspectWslPath } from "@/modules/guard";
-import type { RemotePathAccess } from "@/modules/guard";
+import { MAX_DIRECTORY_ENTRIES } from "@wsl/_defs";
+import { quoteShellArgument } from "@wsl/_libs";
+import type { WslDirectoryEntry } from "@wsl/_types";
+import { GuardRejectionError, inspectWslPath } from "@wsl/modules/guard";
+import type { RemotePathAccess } from "@wsl/modules/guard";
 
 import type { WslHost, WslProcessOutput } from "./wsl-host";
 

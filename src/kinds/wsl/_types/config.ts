@@ -1,4 +1,4 @@
-import type { SshPolicy } from "@akms/mcp-ssh";
+import type { SshPolicy } from "@ssh/index";
 
 /**
  * Guard rules applied to every command / file operation in the distro.

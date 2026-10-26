@@ -4,15 +4,15 @@ import path from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { $logger, expandHomePath, formatBytes } from "@/_libs";
-import { GuardRejectionError, inspectLocalPath } from "@/modules/guard";
+import { $logger, expandHomePath, formatBytes } from "@ssh/_libs";
+import { GuardRejectionError, inspectLocalPath } from "@ssh/modules/guard";
 import {
     downloadFile,
     listRemoteDirectory,
     readRemoteFile,
     uploadFile,
     writeRemoteFile,
-} from "@/modules/ssh";
+} from "@ssh/modules/ssh";
 
 import { formatDirectoryListing } from "./format";
 import {

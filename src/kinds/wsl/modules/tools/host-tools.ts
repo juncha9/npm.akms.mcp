@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { $logger } from "@/_libs";
-import type { WslDistroStatus } from "@/_types";
-import { probeDistroFacts, queryDistroListing } from "@/modules/wsl";
+import { $logger } from "@wsl/_libs";
+import type { WslDistroStatus } from "@wsl/_types";
+import { probeDistroFacts, queryDistroListing } from "@wsl/modules/wsl";
 
 import { formatHostProfile } from "./format";
 import { textResult, toToolError } from "./tool-context";

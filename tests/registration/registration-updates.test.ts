@@ -1,14 +1,14 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Registry } from "../src/modules/registration/registry";
-import { ManagedSession, updatesMenu } from "../src/modules/registration/menu";
-import { latestRuntimeVersion, type GlobalRuntime } from "../src/modules/registration/runtime";
-import { Prompter } from "../src/modules/registration/prompter";
-import type { McpKind } from "../src/modules/registration/types";
+import { Registry } from "@/modules/registration/registry";
+import { ManagedSession, updatesMenu } from "@/modules/registration/menu";
+import { latestRuntimeVersion, type GlobalRuntime } from "@/modules/registration/runtime";
+import { Prompter } from "@/modules/registration/prompter";
+import type { McpKind } from "@/modules/registration/types";
 
 let directory: string;
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms updates ")); vi.stubEnv("AKMS_MCP_HOME", directory); fs.writeFileSync(path.join(directory, "registry.json"), JSON.stringify({ version: 1, clients: [], connections: {} })); });

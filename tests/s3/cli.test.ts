@@ -4,13 +4,13 @@ import { describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { fixture } from "./fixture";
-import { SERVER_VERSION } from "../src/profile";
+import { SERVER_VERSION } from "@s3/profile";
 
 function environment() {
     return Object.fromEntries(Object.entries(process.env).filter(([key, value]) => value !== undefined && !key.startsWith("S3_"))) as Record<string, string>;
 }
 async function run(args: string[], env = {}) {
-    const child = spawn(process.execPath, [path.resolve("lib/cli.js"), ...args], { env: { ...environment(), ...env }, windowsHide: true, stdio: "pipe" });
+    const child = spawn(process.execPath, [path.resolve("lib/s3.js"), ...args], { env: { ...environment(), ...env }, windowsHide: true, stdio: "pipe" });
     let stdout = ""; let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += String(chunk); });
     child.stderr.on("data", (chunk) => { stderr += String(chunk); });
@@ -35,7 +35,7 @@ describe("built CLI", () => {
         } finally { await remote.close(); }
     });
     it("speaks MCP stdio without human output on stdout and exits on close", async () => {
-        const transport = new StdioClientTransport({ command: process.execPath, args: [path.resolve("lib/cli.js")], env: environment(), stderr: "pipe" });
+        const transport = new StdioClientTransport({ command: process.execPath, args: [path.resolve("lib/s3.js")], env: environment(), stderr: "pipe" });
         const client = new Client({ name: "stdio-test", version: "1.0.0" });
         let stderr = ""; transport.stderr?.on("data", (chunk) => { stderr += String(chunk); });
         try {

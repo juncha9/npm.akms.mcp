@@ -1,4 +1,4 @@
-import type { GuardVerdict } from "@/_types";
+import type { GuardVerdict } from "@db/_types";
 
 /** A statement the guard refused. Nothing was sent to the database. */
 export class GuardRejectionError extends Error {

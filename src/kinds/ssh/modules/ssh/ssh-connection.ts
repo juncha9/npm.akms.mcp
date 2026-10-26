@@ -7,10 +7,10 @@ import { StringDecoder } from "node:string_decoder";
 import type ssh2 from "ssh2";
 import type { ConnectConfig, SFTPWrapper } from "ssh2";
 
-import { CWD_MARKER, KEEPALIVE_INTERVAL_MS } from "@/_defs";
-import { $logger, quoteShellArgument, truncateOutput } from "@/_libs";
-import type { SshExecResult, SshHostProfile, SshJumpProfile } from "@/_types";
-import { GuardRejectionError, canonicalizeCommand, inspectCommand, inspectWorkingDirectory } from "@/modules/guard";
+import { CWD_MARKER, KEEPALIVE_INTERVAL_MS } from "@ssh/_defs";
+import { $logger, quoteShellArgument, truncateOutput } from "@ssh/_libs";
+import type { SshExecResult, SshHostProfile, SshJumpProfile } from "@ssh/_types";
+import { GuardRejectionError, canonicalizeCommand, inspectCommand, inspectWorkingDirectory } from "@ssh/modules/guard";
 
 /** Stops runaway output from filling the heap before truncation can happen. */
 const OUTPUT_HARD_CAP_MULTIPLIER = 4;

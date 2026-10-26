@@ -2,9 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConfigTarget, McpServerEntry } from "@/_types";
-import { hasMcpServerToml, parseMcpServersToml, renderMcpServerTable, writeMcpServerToml } from "@/modules/manage/targets/toml-subset";
-import { createJsonFileTarget } from "@/modules/manage/targets/json-file";
+import type { ConfigTarget, McpServerEntry } from "@ssh/_types";
+import { hasMcpServerToml, parseMcpServersToml, renderMcpServerTable, writeMcpServerToml } from "@ssh/modules/manage/targets/toml-subset";
+import { createJsonFileTarget } from "@ssh/modules/manage/targets/json-file";
 
 const ENTRY: McpServerEntry = { command: "npx", args: ["-y", "@akms/mcp-ssh"], env: { KEY: "new-value" } };
 let directory: string;
@@ -84,7 +84,7 @@ describe.each(["json", "toml"])("%s config write failures", (format) => {
         else {
             vi.spyOn(os, "homedir").mockReturnValue(directory);
             vi.resetModules();
-            const { createCodexTarget } = await import("@/modules/manage/targets/codex");
+            const { createCodexTarget } = await import("@ssh/modules/manage/targets/codex");
             target = createCodexTarget();
             filePath = path.join(directory, ".codex", "config.toml");
             expect(target.location).toBe(filePath);

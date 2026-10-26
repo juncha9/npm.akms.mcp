@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createWslCatalogServer as createCatalog } from "../src/server";
-import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "../src/modules/registration/catalog";
+import { createWslCatalogServer as createCatalog } from "@wsl/server";
+import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "@/modules/registration/catalog";
 
 const kind = "wsl" as const;
 const baseTools = ["wsl_list_hosts","wsl_connect","wsl_disconnect","wsl_list_sessions","wsl_exec","wsl_list_dir","wsl_read_file","wsl_write_file","wsl_upload","wsl_download"];

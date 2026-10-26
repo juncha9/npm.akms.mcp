@@ -7,12 +7,12 @@ import {
     inspectLocalPath,
     inspectRemotePath,
     splitCommandSegments,
-} from "@akms/mcp-ssh";
-import type { RemotePathAccess, SegmentAnalysis } from "@akms/mcp-ssh";
+} from "@ssh/index";
+import type { RemotePathAccess, SegmentAnalysis } from "@ssh/index";
 
-import { MOUNT_PATH_PATTERN, WINDOWS_INTEROP_BINARY_PATTERN, WSL_CATASTROPHE_RULES } from "@/_defs";
-import { mountPathToWindows } from "@/_libs";
-import type { GuardVerdict, WslHostProfile, WslPolicy } from "@/_types";
+import { MOUNT_PATH_PATTERN, WINDOWS_INTEROP_BINARY_PATTERN, WSL_CATASTROPHE_RULES } from "@wsl/_defs";
+import { mountPathToWindows } from "@wsl/_libs";
+import type { GuardVerdict, WslHostProfile, WslPolicy } from "@wsl/_types";
 
 /** Nested `$(…)` levels the WSL-specific pass descends into; matches the base guard's own limit. */
 const MAX_INSPECTION_DEPTH = 5;

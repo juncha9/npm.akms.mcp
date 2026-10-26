@@ -2,11 +2,11 @@ import { Registry, sessionName } from "./registry";
 import { CLIENT_LABELS } from "./types";
 import { packageName, runtimeInstallCommand, runtimeIsOlder, runtimePrefix } from "./runtime";
 import { plainText, writeWrapped } from "./comparison";
-import { Prompter, PromptBackError, PromptClosedError } from "./prompter";
+import { PromptBackError, PromptClosedError, type RegistrationPrompter } from "./prompter";
 import type { McpKind } from "./types";
 import { KINDS } from "./types";
 
-export async function prepareRuntime(prompter: Prompter, registry: Registry, kind: McpKind, version?: string): Promise<boolean> {
+export async function prepareRuntime(prompter: RegistrationPrompter, registry: Registry, kind: McpKind, version?: string): Promise<boolean> {
     const installed = registry.globalRuntime(kind);
     if(installed) {
         if(installed.linked || !version || !runtimeIsOlder(installed.version, version)) return true;
@@ -32,7 +32,7 @@ export async function prepareRuntime(prompter: Prompter, registry: Registry, kin
     }
 }
 
-export async function runtimeMenu(prompter: Prompter, registry: Registry, requestedKind?: McpKind): Promise<void> {
+export async function runtimeMenu(prompter: RegistrationPrompter, registry: Registry, requestedKind?: McpKind): Promise<void> {
     let kind = requestedKind;
     for(;;) {
         prompter.clearScreen();

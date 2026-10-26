@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { $logger } from "@/_libs";
+import { $logger } from "@ssh/_libs";
 
 const ORIGINAL_LOG_LEVEL = process.env.SSH_MCP_LOG_LEVEL;
 

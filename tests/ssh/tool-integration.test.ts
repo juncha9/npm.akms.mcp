@@ -8,8 +8,8 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import ssh2 from "ssh2";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createSshMcpServer } from "@/server";
-import type { SshMcpServerInstance } from "@/server";
+import { createSshMcpServer } from "@ssh/server";
+import type { SshMcpServerInstance } from "@ssh/server";
 
 process.env.SSH_MCP_LOG_LEVEL = "silent";
 

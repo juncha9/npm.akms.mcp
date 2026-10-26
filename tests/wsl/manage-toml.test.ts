@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { McpServerEntry } from "@/_types";
-import { parseMcpServersToml, renderMcpServerTable, writeMcpServerToml } from "@/modules/manage/targets/toml-subset";
+import type { McpServerEntry } from "@wsl/_types";
+import { parseMcpServersToml, renderMcpServerTable, writeMcpServerToml } from "@wsl/modules/manage/targets/toml-subset";
 
 /** A Codex config as a person keeps it: settings, comments, another server, a hand-tuned key. */
 const CODEX_CONFIG = [

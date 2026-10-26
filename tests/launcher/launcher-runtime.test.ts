@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { launchMcp } from "../src/modules/launcher/npm";
-import type { GlobalRuntime } from "../src/modules/registration/runtime";
+import { launchMcp } from "@/modules/launcher/npm";
+import type { GlobalRuntime } from "@/modules/registration/runtime";
 
 const runtime: GlobalRuntime = { command: process.execPath, args: ["/fixture/runtime/lib/cli.js"], version: "1.2.3", linked: false };
 function setup() {

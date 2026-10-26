@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS, SINGLE_HOST_ENV } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { SshHostProfile } from "@/_types";
-import { runConnectionCheck, runConfigCommand } from "@/modules/manage";
-import { createSshCatalogServer, createSshMcpServer } from "@/server";
+import { LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS, SINGLE_HOST_ENV } from "@ssh/_defs";
+import { $logger } from "@ssh/_libs";
+import type { SshHostProfile } from "@ssh/_types";
+import { runConnectionCheck, runConfigCommand } from "@ssh/modules/manage";
+import { createSshCatalogServer, createSshMcpServer } from "@ssh/server";
 
 interface CliArguments {
     showHelp: boolean;

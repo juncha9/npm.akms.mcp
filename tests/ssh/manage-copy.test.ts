@@ -4,9 +4,9 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ConfigTarget, McpServerEntry } from "@/_types";
-import { runTargetConfigCommand as runConfigCommand } from "@/modules/manage";
-import { createJsonFileTarget } from "@/modules/manage/targets/json-file";
+import type { ConfigTarget, McpServerEntry } from "@ssh/_types";
+import { runTargetConfigCommand as runConfigCommand } from "@ssh/modules/manage";
+import { createJsonFileTarget } from "@ssh/modules/manage/targets/json-file";
 
 const ENTRY: McpServerEntry = {
     command: "custom-npx",

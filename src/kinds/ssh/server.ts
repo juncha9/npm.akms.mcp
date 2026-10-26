@@ -1,13 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { SERVER_NAME, SERVER_VERSION } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { SshHostProfile } from "@/_types";
-import { loadHostProfile } from "@/modules/config";
-import { SshSessionManager } from "@/modules/ssh";
-import { registerAllTools } from "@/modules/tools";
-import type { ToolContext } from "@/modules/tools";
-import { createCatalogServer } from "./modules/session-server";
+import { SERVER_NAME, SERVER_VERSION } from "@ssh/_defs";
+import { $logger } from "@ssh/_libs";
+import type { SshHostProfile } from "@ssh/_types";
+import { loadHostProfile } from "@ssh/modules/config";
+import { SshSessionManager } from "@ssh/modules/ssh";
+import { registerAllTools } from "@ssh/modules/tools";
+import type { ToolContext } from "@ssh/modules/tools";
+import { createCatalogServer } from "@/modules/session-server";
 
 export interface SshMcpServerInstance {
     server: McpServer;

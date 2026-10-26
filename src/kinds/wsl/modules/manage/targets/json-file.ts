@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { updateConfigFile } from "./config-file";
 
-import type { ConfigTarget, ConfigTargetId, McpServerEntry } from "@/_types";
+import type { ConfigTarget, ConfigTargetId, McpServerEntry } from "@wsl/_types";
 
 /** Shape-checks one `mcpServers` value; anything without a string `command` is not an entry. */
 export function toMcpServerEntry(value: unknown): McpServerEntry | null {

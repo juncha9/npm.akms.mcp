@@ -1,5 +1,5 @@
 import { lineState, scanTomlLine } from "./toml-lines";
-import type { McpServerEntry } from "@/_types";
+import type { McpServerEntry } from "@db/_types";
 import { hasTomlEntry, parseConfigToml, readTomlEntries, verifyTomlEdit } from "./toml-validation";
 
 /**

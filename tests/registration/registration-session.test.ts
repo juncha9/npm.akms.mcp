@@ -1,15 +1,15 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Registry, entryHash } from "../src/modules/registration/registry";
-import { readCatalog, maxConnectionNameLength, sessionToolName } from "../src/modules/registration/catalog";
-import { runtimeMenu } from "../src/modules/registration/runtime-menu";
-import { ManagedSession, registrationMenu, syncMenu } from "../src/modules/registration/menu";
-import { Prompter } from "../src/modules/registration/prompter";
-import type { ConfigTarget, McpKind, McpServerEntry } from "../src/modules/registration/types";
+import { Registry, entryHash } from "@/modules/registration/registry";
+import { readCatalog, maxConnectionNameLength, sessionToolName } from "@/modules/registration/catalog";
+import { runtimeMenu } from "@/modules/registration/runtime-menu";
+import { ManagedSession, registrationMenu, syncMenu } from "@/modules/registration/menu";
+import { Prompter } from "@/modules/registration/prompter";
+import type { ConfigTarget, McpKind, McpServerEntry } from "@/modules/registration/types";
 
 let directory: string;
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-session-")); vi.stubEnv("AKMS_MCP_HOME", path.join(directory, "catalog")); });

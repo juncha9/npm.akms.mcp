@@ -1,10 +1,10 @@
-import type { Registry } from "../registration/registry";
-import { ManagedSession } from "../registration/menu";
-import type { ManagementMode } from "../registration/menu";
+import type { Registry } from "@/modules/registration/registry";
+import { ManagedSession } from "@/modules/registration/menu";
+import type { ManagementMode } from "@/modules/registration/menu";
 import type { Readable, Writable } from "node:stream";
 
-import { SINGLE_HOST_ENV, SERVER_VERSION } from "@/_defs";
-import type { ConfigTarget, ConfigWriteResult, HostSetupAnswers, McpServerEntry } from "@/_types";
+import { SINGLE_HOST_ENV, SERVER_VERSION } from "@ssh/_defs";
+import type { ConfigTarget, ConfigWriteResult, HostSetupAnswers, McpServerEntry } from "@ssh/_types";
 
 import { profileFromEnv, runConnectionCheck } from "./connection-check";
 import { copyEntryToClient } from "./copy-entry";

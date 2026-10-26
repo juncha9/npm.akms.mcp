@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 describe("cold process memory", () => {
     it("keeps configured startup light, then initializes the real parser and tunnel safely", () => {
-        const entry = new URL("../src/index.ts", import.meta.url).href;
+        const entry = new URL("../../src/kinds/db/index.ts", import.meta.url).href;
         const script = `
             import assert from "node:assert/strict";
             import { createRequire } from "node:module";
@@ -43,7 +43,7 @@ describe("cold process memory", () => {
         `;
         const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(DB_|SSH_|NODE_OPTIONS$)/i.test(key)));
         const result = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
-            cwd: fileURLToPath(new URL("..", import.meta.url)),
+            cwd: fileURLToPath(new URL("../..", import.meta.url)),
             env: { ...env, DB_MCP_LOG_LEVEL: "silent" },
             encoding: "utf8", timeout: 20000, windowsHide: true,
         });

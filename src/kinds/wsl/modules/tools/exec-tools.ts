@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { $logger } from "@/_libs";
-import type { WslExecResult } from "@/_types";
+import { $logger } from "@wsl/_libs";
+import type { WslExecResult } from "@wsl/_types";
 
 import { formatExecResult } from "./format";
 import { resolveHost, textResult, toToolError } from "./tool-context";

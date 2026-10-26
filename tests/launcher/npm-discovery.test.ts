@@ -1,6 +1,6 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { findNpmCli } from "../src/modules/launcher/npm";
+import { findNpmCli } from "@/modules/launcher/npm";
 
 const files = vi.hoisted(() => new Map<string, string>());
 vi.mock("node:fs", async (original) => ({

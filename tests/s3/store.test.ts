@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { loadS3Profile } from "../src/profile";
-import { S3Store } from "../src/store";
+import { loadS3Profile } from "@s3/profile";
+import { S3Store } from "@s3/store";
 import { fixture } from "./fixture";
 
 describe("S3 wire protocol and storage policy", () => {

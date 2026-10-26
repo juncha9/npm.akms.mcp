@@ -11,3 +11,5 @@ export const CLIENT_LABELS = {
     "claude-desktop": "Claude Desktop",
     cursor: "Cursor",
 } as const;
+
+export { PACKAGE_VERSION } from "./version";

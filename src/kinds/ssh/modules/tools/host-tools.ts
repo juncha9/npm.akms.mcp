@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { $logger } from "@/_libs";
+import { $logger } from "@ssh/_libs";
 
 import { formatHostProfile } from "./format";
 import { textResult, toToolError } from "./tool-context";

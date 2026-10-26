@@ -1,9 +1,9 @@
 import type { Writable } from "node:stream";
-import { DB_ENV } from "@/_defs";
-import type { DbProfile } from "@/_types";
-import { describeError } from "@/_libs/text";
-import { PostgresDriver, type CheckReport } from "@/modules/postgres/postgres-driver";
-import { loadDbProfile } from "@/modules/profile";
+import { DB_ENV } from "@db/_defs";
+import type { DbProfile } from "@db/_types";
+import { describeError } from "@db/_libs/text";
+import { PostgresDriver, type CheckReport } from "@db/modules/postgres/postgres-driver";
+import { loadDbProfile } from "@db/modules/profile";
 import { CheckProgress } from "./check-progress";
 
 export interface ConnectionCheckResult {

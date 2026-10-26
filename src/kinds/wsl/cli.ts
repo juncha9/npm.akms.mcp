@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS, SINGLE_HOST_ENV } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { WslHostProfile } from "@/_types";
-import { runDistroCheck, runConfigCommand } from "@/modules/manage";
-import { createWslCatalogServer, createWslMcpServer } from "@/server";
+import { LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS, SINGLE_HOST_ENV } from "@wsl/_defs";
+import { $logger } from "@wsl/_libs";
+import type { WslHostProfile } from "@wsl/_types";
+import { runDistroCheck, runConfigCommand } from "@wsl/modules/manage";
+import { createWslCatalogServer, createWslMcpServer } from "@wsl/server";
 
 /** `@akms/mcp-ssh`'s guard logs through its own logger; keep the two thresholds aligned. */
 const SSH_LOG_LEVEL_ENV = "SSH_MCP_LOG_LEVEL";

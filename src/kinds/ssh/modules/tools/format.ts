@@ -1,14 +1,14 @@
-import { SINGLE_HOST_ENV } from "@/_defs";
-import { formatBytes } from "@/_libs";
+import { SINGLE_HOST_ENV } from "@ssh/_defs";
+import { formatBytes } from "@ssh/_libs";
 import type {
     GuardVerdict,
     SshExecResult,
     SshHostProfile,
     SshRemoteEntry,
     SshSessionInfo,
-} from "@/_types";
-import { toHostSummary } from "@/modules/config";
-import type { RemoteDirectoryListing } from "@/modules/ssh";
+} from "@ssh/_types";
+import { toHostSummary } from "@ssh/modules/config";
+import type { RemoteDirectoryListing } from "@ssh/modules/ssh";
 
 const ENTRY_TYPE_MARKERS: Record<SshRemoteEntry["type"], string> = {
     file: "-",

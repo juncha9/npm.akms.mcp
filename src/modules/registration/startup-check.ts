@@ -2,7 +2,7 @@ import { spawn, execFile } from "node:child_process";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import { visibleField, writeWrapped } from "./comparison";
-import type { Prompter } from "./prompter";
+import type { RegistrationPrompter } from "./prompter";
 import type { McpServerEntry } from "./types";
 import { launchKind, standardLaunch } from "./runtime";
 
@@ -146,7 +146,7 @@ export async function checkStartup(entry: McpServerEntry, timeoutMs = 10_000): P
     });
 }
 
-export async function checkConnections(prompter: Prompter, entries: { name: string; entry: McpServerEntry; prefixes?: string[]; maskEntries?: McpServerEntry[] }[], check = checkStartup): Promise<void> {
+export async function checkConnections(prompter: RegistrationPrompter, entries: { name: string; entry: McpServerEntry; prefixes?: string[]; maskEntries?: McpServerEntry[] }[], check = checkStartup): Promise<void> {
     if(!entries.length) return;
     prompter.write("\nStartup check (initialize and tools/list only)\n");
     const checked = new Map<string, StartupResult>();

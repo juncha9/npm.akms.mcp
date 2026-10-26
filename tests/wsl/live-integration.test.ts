@@ -6,8 +6,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createWslMcpServer } from "@/server";
-import type { WslMcpServerInstance } from "@/server";
+import { createWslMcpServer } from "@wsl/server";
+import type { WslMcpServerInstance } from "@wsl/server";
 
 import { LIVE_DISTRO, LIVE_ENABLED, LIVE_USER } from "./_helpers";
 

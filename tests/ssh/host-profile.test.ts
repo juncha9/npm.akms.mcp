@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadHostProfile, toHostSummary } from "@/modules/config";
+import { loadHostProfile, toHostSummary } from "@ssh/modules/config";
 
 // Silences the stderr logger so the "no host is registered" warning doesn't pollute output.
 process.env.SSH_MCP_LOG_LEVEL = "silent";

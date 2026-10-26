@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { PROTECTED_LOCAL_PATH_RULES, UNSAFE_PATH_CHARACTER_PATTERN } from "@/_defs";
-import { $logger, isAbsoluteRemotePath, isRemotePathWithin, normalizeRemotePath } from "@/_libs";
-import type { GuardVerdict, SshPolicy } from "@/_types";
+import { PROTECTED_LOCAL_PATH_RULES, UNSAFE_PATH_CHARACTER_PATTERN } from "@ssh/_defs";
+import { $logger, isAbsoluteRemotePath, isRemotePathWithin, normalizeRemotePath } from "@ssh/_libs";
+import type { GuardVerdict, SshPolicy } from "@ssh/_types";
 
 export type RemotePathAccess = "read" | "write";
 

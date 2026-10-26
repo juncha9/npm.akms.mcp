@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createDbCatalogServer as createCatalog } from "../src/server";
-import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "../src/modules/registration/catalog";
+import { createDbCatalogServer as createCatalog } from "@db/server";
+import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "@/modules/registration/catalog";
 
 const kind = "db" as const;
 const baseTools = ["db_list_hosts","db_query","db_schemas","db_tables","db_describe","db_explain"];

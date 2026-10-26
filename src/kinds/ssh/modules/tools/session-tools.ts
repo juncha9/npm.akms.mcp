@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { $logger } from "@/_libs";
+import { $logger } from "@ssh/_libs";
 
 import { formatSessionList } from "./format";
 import { errorResult, resolveProfile, textResult, toToolError } from "./tool-context";

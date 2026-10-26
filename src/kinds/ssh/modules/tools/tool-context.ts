@@ -1,10 +1,10 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { SINGLE_HOST_ENV } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { SshHostProfile } from "@/_types";
-import { GuardRejectionError } from "@/modules/guard";
-import { SshConnection, SshSession, SshSessionManager } from "@/modules/ssh";
+import { SINGLE_HOST_ENV } from "@ssh/_defs";
+import { $logger } from "@ssh/_libs";
+import type { SshHostProfile } from "@ssh/_types";
+import { GuardRejectionError } from "@ssh/modules/guard";
+import { SshConnection, SshSession, SshSessionManager } from "@ssh/modules/ssh";
 
 import { formatGuardRejection } from "./format";
 

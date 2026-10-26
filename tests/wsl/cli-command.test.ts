@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const PROJECT_DIRECTORY = fileURLToPath(new URL("../", import.meta.url));
+const PROJECT_DIRECTORY = fileURLToPath(new URL("../../", import.meta.url));
 const CONFIG_TEXT = 'model = "test-model"\n';
 
 let homeDirectory = "";
@@ -40,7 +40,7 @@ function runCli(args: string[]) {
     env.WSL_MCP_LOG_LEVEL = "silent";
     env.SSH_MCP_LOG_LEVEL = "silent";
 
-    return spawnSync(process.execPath, ["--import", "tsx", "src/cli.ts", ...args], {
+    return spawnSync(process.execPath, ["--import", "tsx", "src/kinds/wsl/cli.ts", ...args], {
         cwd: PROJECT_DIRECTORY,
         env: env,
         input: "q\n",

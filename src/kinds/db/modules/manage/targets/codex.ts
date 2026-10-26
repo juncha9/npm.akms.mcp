@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { findExecutable } from "@/_libs/fs-path";
-import type { ConfigTarget, ConfigWriteResult, McpServerEntry } from "@/_types";
+import { findExecutable } from "@db/_libs/fs-path";
+import type { ConfigTarget, ConfigWriteResult, McpServerEntry } from "@db/_types";
 
 import { updateConfigFile } from "./config-file";
 import { hasMcpServerToml, parseMcpServersToml, writeMcpServerToml } from "./toml-subset";

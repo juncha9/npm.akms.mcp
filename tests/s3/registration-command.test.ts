@@ -1,13 +1,13 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runConfigCommand } from "../src/modules/manage";
-import { Registry } from "../src/modules/registration/registry";
-import { createJsonFileTarget } from "../src/modules/manage/targets/json-file";
+import { runConfigCommand } from "@s3/modules/manage";
+import { Registry } from "@/modules/registration/registry";
+import { createJsonFileTarget } from "@s3/modules/manage/targets/json-file";
 
 let directory: string;
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-s3-standalone-")); vi.stubEnv("AKMS_MCP_HOME", directory); });
@@ -111,7 +111,7 @@ describe("standalone s3 registration", () => {
     });
     it("exposes register from its own CLI and exits cleanly on closed input", () => {
         const env = { ...process.env, AKMS_MCP_HOME: directory, HOME: directory, USERPROFILE: directory, CODEX_HOME: path.join(directory, ".codex"), APPDATA: path.join(directory, "AppData") };
-        const result = spawnSync(process.execPath, ["--import", "tsx", "src/cli.ts", "register"], { env, input: "q\n", encoding: "utf8", timeout: 15000, windowsHide: true });
+        const result = spawnSync(process.execPath, ["--import", "tsx", "src/kinds/s3/cli.ts", "register"], { env, input: "q\n", encoding: "utf8", timeout: 15000, windowsHide: true });
         expect(result.status, result.stderr).toBe(0);
         expect(result.stdout).toContain("Register");
         expect(fs.existsSync(path.join(directory, "registry.json"))).toBe(false);

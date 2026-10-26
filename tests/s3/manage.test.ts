@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { runTargetConfigCommand as runConfigCommand, maskEntry } from "../src/modules/manage";
-import type { ConfigTarget, McpServerEntry } from "../src/_types";
+import { runTargetConfigCommand as runConfigCommand, maskEntry } from "@s3/modules/manage";
+import type { ConfigTarget, McpServerEntry } from "@s3/_types";
 
 const entry: McpServerEntry = { command: "npx", args: ["-y", "@akms/mcp-s3"], env: { S3_BUCKET: "my-bucket", S3_AUTH: "static", S3_ACCESS_KEY_ID: "sensitive-key", S3_SECRET_ACCESS_KEY: "sensitive-secret", S3_SESSION_TOKEN: "sensitive-token", CUSTOM: "keep" } };
 function target(id: ConfigTarget["id"], entries: Record<string, McpServerEntry> = {}) {

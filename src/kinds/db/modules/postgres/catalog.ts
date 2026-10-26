@@ -1,4 +1,4 @@
-import { CATALOG_MAX_ROWS } from "@/_defs";
+import { CATALOG_MAX_ROWS } from "@db/_defs";
 import type { PostgresDriver } from "./postgres-driver";
 
 // Catalog reads go through the same execute() as the model's SQL — guarded, read-only, rolled back.

@@ -1,9 +1,9 @@
 import type { Writable } from "node:stream";
 
-import type { WslDistroStatus, WslHostProfile } from "@/_types";
-import { loadHostProfile } from "@/modules/config";
-import { formatDistroStatus } from "@/modules/tools";
-import { WslHost, probeDistroFacts, queryDistroListing } from "@/modules/wsl";
+import type { WslDistroStatus, WslHostProfile } from "@wsl/_types";
+import { loadHostProfile } from "@wsl/modules/config";
+import { formatDistroStatus } from "@wsl/modules/tools";
+import { WslHost, probeDistroFacts, queryDistroListing } from "@wsl/modules/wsl";
 import { CheckProgress } from "./check-progress";
 
 /**

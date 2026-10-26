@@ -1,6 +1,6 @@
-import { CWD_MARKER } from "@/_defs";
-import { quoteShellArgument } from "@/_libs";
-import type { WslHostProfile } from "@/_types";
+import { CWD_MARKER } from "@wsl/_defs";
+import { quoteShellArgument } from "@wsl/_libs";
+import type { WslHostProfile } from "@wsl/_types";
 
 /**
  * The `wsl.exe` argument vector for running `script` in the profile's distro as its user.

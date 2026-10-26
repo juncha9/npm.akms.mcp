@@ -1,7 +1,7 @@
 import http from "node:http";
 import { createHash } from "node:crypto";
 import type { AddressInfo } from "node:net";
-import type { S3Env } from "../src/profile";
+import type { S3Env } from "@s3/profile";
 
 export interface StoredObject { body: Buffer; etag: string; type: string; metadata?: Record<string, string>; encoding?: string }
 export interface Request { method: string; key: string; url: string; headers: http.IncomingHttpHeaders; query: URLSearchParams; body?: Buffer }

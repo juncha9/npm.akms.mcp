@@ -1,7 +1,7 @@
-import { launchCommand, launchKind } from "../registration/runtime";
-import { DB_ENV, DEFAULT_POSTGRES_PORT, DEFAULT_SSH_PORT, FALSY_ENV_VALUES, PACKAGE_NAME, SERVER_NAME, TRUTHY_ENV_VALUES } from "@/_defs";
-import type { DbSetupAnswers, McpServerEntry, SslMode } from "@/_types";
-import { parseDatabaseUrl } from "@/modules/profile";
+import { launchCommand, launchKind } from "@/modules/registration/runtime";
+import { DB_ENV, DEFAULT_POSTGRES_PORT, DEFAULT_SSH_PORT, FALSY_ENV_VALUES, PACKAGE_NAME, SERVER_NAME, TRUTHY_ENV_VALUES } from "@db/_defs";
+import type { DbSetupAnswers, McpServerEntry, SslMode } from "@db/_types";
+import { parseDatabaseUrl } from "@db/modules/profile";
 
 /**
  * The variables the form owns. Anything else under `DB_*` (`DB_ALIAS`, deny patterns,

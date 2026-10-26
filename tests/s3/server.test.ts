@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createS3McpServer } from "../src/server";
+import { createS3McpServer } from "@s3/server";
 import { fixture } from "./fixture";
 
 const cleanup: Array<() => Promise<void>> = [];

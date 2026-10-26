@@ -1,12 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SERVER_NAME, SERVER_VERSION } from "@/_defs";
-import type { DbProfile } from "@/_types";
-import type { EnvSource } from "@/_libs/env";
-import { $logger } from "@/_libs/logger";
-import { PostgresDriver } from "@/modules/postgres/postgres-driver";
-import { loadDbProfile } from "@/modules/profile";
-import { registerAllTools } from "@/modules/tools/register-tools";
-import { createCatalogServer } from "./modules/session-server";
+import { SERVER_NAME, SERVER_VERSION } from "@db/_defs";
+import type { DbProfile } from "@db/_types";
+import type { EnvSource } from "@db/_libs/env";
+import { $logger } from "@db/_libs/logger";
+import { PostgresDriver } from "@db/modules/postgres/postgres-driver";
+import { loadDbProfile } from "@db/modules/profile";
+import { registerAllTools } from "@db/modules/tools/register-tools";
+import { createCatalogServer } from "@/modules/session-server";
 
 export const SERVER_INSTRUCTIONS = [
     "This server runs SQL against one PostgreSQL database — directly or through an SSH tunnel, as configured in this server's own environment.",

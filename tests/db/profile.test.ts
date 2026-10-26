@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadDbProfile, toDbSummary } from "@/modules/profile";
+import { loadDbProfile, toDbSummary } from "@db/modules/profile";
 
 describe("loadDbProfile", () => {
     it("returns null when nothing is configured", () => {

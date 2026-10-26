@@ -8,10 +8,10 @@ import { PassThrough } from "node:stream";
 import ssh2 from "ssh2";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SshHostProfile } from "@/_types";
-import { SshConnection } from "@/modules/ssh";
-import { expandProxyCommand } from "@/modules/ssh/ssh-connection";
-import { runConnectionCheck } from "@/modules/manage/connection-check";
+import type { SshHostProfile } from "@ssh/_types";
+import { SshConnection } from "@ssh/modules/ssh";
+import { expandProxyCommand } from "@ssh/modules/ssh/ssh-connection";
+import { runConnectionCheck } from "@ssh/modules/manage/connection-check";
 
 import { createPolicy } from "./_helpers";
 

@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { compareEntries } from "../src/modules/registration/comparison";
-import { displayWidth, Prompter } from "../src/modules/manage/prompter";
+import { compareEntries } from "@/modules/registration/comparison";
+import { displayWidth, Prompter } from "@db/modules/manage/prompter";
 
 describe("registration value comparison", () => {
     it("wraps long Korean descriptions without dropping their differing suffix or exposing credentials", () => {

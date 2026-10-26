@@ -1,6 +1,6 @@
-import { launchCommand, launchKind } from "../registration/runtime";
-import { PACKAGE_NAME, SERVER_NAME, SINGLE_HOST_ENV, TRUTHY_ENV_VALUES } from "@/_defs";
-import type { HostSetupAnswers, McpServerEntry } from "@/_types";
+import { launchCommand, launchKind } from "@/modules/registration/runtime";
+import { PACKAGE_NAME, SERVER_NAME, SINGLE_HOST_ENV, TRUTHY_ENV_VALUES } from "@wsl/_defs";
+import type { HostSetupAnswers, McpServerEntry } from "@wsl/_types";
 
 /**
  * The variables the form owns. Anything else under `WSL_*` (`WSL_NAME`, `WSL_CWD`,

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 // the handshake completes, and then this process exits abruptly, leaving the server on dead pipes.
 // Prints the server's pid on stdout, read from the server's own "mcp server ready" log line.
 
-const CLI_PATH = fileURLToPath(new URL("../../src/cli.ts", import.meta.url));
+const CLI_PATH = fileURLToPath(new URL("../../../src/kinds/db/cli.ts", import.meta.url));
 
 const server = spawn("cmd", ["/c", process.execPath, "--import", "tsx", CLI_PATH], {
     stdio: ["pipe", "pipe", "pipe"],

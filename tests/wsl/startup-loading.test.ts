@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 describe("WSL runtime loading", () => {
     it("keeps ssh2 unloaded during startup, guard checks and command execution", () => {
-        const entry = new URL("../src/index.ts", import.meta.url).href;
+        const entry = new URL("../../src/kinds/wsl/index.ts", import.meta.url).href;
         const script = `
             import assert from "node:assert/strict";
             import childProcess from "node:child_process";
@@ -51,7 +51,7 @@ describe("WSL runtime loading", () => {
         `;
         const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(WSL_|SSH_|NODE_OPTIONS$)/i.test(key)));
         const result = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
-            cwd: fileURLToPath(new URL("..", import.meta.url)),
+            cwd: fileURLToPath(new URL("../..", import.meta.url)),
             env: { ...env, WSL_DISTRO: "memory-probe", WSL_MCP_LOG_LEVEL: "silent", SSH_MCP_LOG_LEVEL: "silent" },
             encoding: "utf8", timeout: 20000, windowsHide: true,
         });

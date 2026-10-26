@@ -2,8 +2,8 @@ import { PassThrough } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import { PromptBackError, PromptClosedError, Prompter } from "@/modules/manage/prompter";
-import type { SelectItem } from "@/modules/manage/prompter";
+import { PromptBackError, PromptClosedError, Prompter } from "@ssh/modules/manage/prompter";
+import type { SelectItem } from "@ssh/modules/manage/prompter";
 
 const ESC = "\u001b";
 const UP = `${ESC}[A`;

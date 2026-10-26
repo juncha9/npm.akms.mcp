@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { isRemotePathWithin } from "@/_libs";
-import { inspectRemotePath, inspectLocalPath } from "@/modules/guard";
+import { isRemotePathWithin } from "@ssh/_libs";
+import { inspectRemotePath, inspectLocalPath } from "@ssh/modules/guard";
 
 import { createPolicy } from "./_helpers";
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { ExecuteResult } from "@/_types";
-import { formatGuardRejection } from "@/modules/guard/guard-error";
-import { formatDbSummary, formatExecuteResult, formatRelationDescription } from "@/modules/tools/format";
-import type { RelationDescription } from "@/modules/postgres/catalog";
+import type { ExecuteResult } from "@db/_types";
+import { formatGuardRejection } from "@db/modules/guard/guard-error";
+import { formatDbSummary, formatExecuteResult, formatRelationDescription } from "@db/modules/tools/format";
+import type { RelationDescription } from "@db/modules/postgres/catalog";
 
 describe("formatExecuteResult", () => {
     it("one JSON object per row, the counts, and how the transaction ended", () => {

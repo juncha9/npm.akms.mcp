@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 function run(script: string) {
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(AWS_|S3_|NODE_OPTIONS$)/i.test(key)));
     return execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
-        cwd: fileURLToPath(new URL("..", import.meta.url)),
+        cwd: fileURLToPath(new URL("../..", import.meta.url)),
         env: { ...env, AWS_EC2_METADATA_DISABLED: "true" },
         encoding: "utf8", timeout: 20000, windowsHide: true,
     }).trim();
@@ -13,7 +13,7 @@ function run(script: string) {
 
 describe("S3 runtime allocation", () => {
     it("honours close and cancellation during cold loading without interrupting another request", () => {
-        const entry = new URL("../lib/index.js", import.meta.url).href;
+        const entry = new URL("../../src/kinds/s3/index.ts", import.meta.url).href;
         const fixture = new URL("./fixture.ts", import.meta.url).href;
         expect(run(`
             import assert from "node:assert/strict";
@@ -45,8 +45,8 @@ describe("S3 runtime allocation", () => {
         `)).toBe("passed");
     }, 25000);
 
-    it.each(["js", "cjs"])("keeps %s startup light and shares safe initialization across requests", (extension) => {
-        const entry = new URL(`../lib/index.${extension}`, import.meta.url).href;
+    it("keeps startup light and shares safe initialization across requests", () => {
+        const entry = new URL("../../src/kinds/s3/index.ts", import.meta.url).href;
         const fixture = new URL("./fixture.ts", import.meta.url).href;
         expect(run(`
             import assert from "node:assert/strict";
@@ -100,7 +100,7 @@ describe("S3 runtime allocation", () => {
     }, 25000);
 
     it.each(["default", "profile"])("loads %s credentials only on first use with isolated fixture credentials", (auth) => {
-        const entry = new URL("../lib/index.js", import.meta.url).href;
+        const entry = new URL("../../src/kinds/s3/index.ts", import.meta.url).href;
         const fixture = new URL("./fixture.ts", import.meta.url).href;
         expect(run(`
             import assert from "node:assert/strict";

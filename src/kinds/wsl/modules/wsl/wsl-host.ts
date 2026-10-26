@@ -1,10 +1,10 @@
 import { spawn } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
 
-import { MAX_CONCURRENT_PROCESSES, OUTPUT_HARD_CAP_MULTIPLIER, WSL_EXECUTABLE, WSL_FAILURE_EXIT_CODES } from "@/_defs";
-import { $logger, truncateOutput } from "@/_libs";
-import type { WslExecResult, WslHostProfile } from "@/_types";
-import { GuardRejectionError, canonicalizeCommand, inspectWorkingDirectory, inspectWslCommand } from "@/modules/guard";
+import { MAX_CONCURRENT_PROCESSES, OUTPUT_HARD_CAP_MULTIPLIER, WSL_EXECUTABLE, WSL_FAILURE_EXIT_CODES } from "@wsl/_defs";
+import { $logger, truncateOutput } from "@wsl/_libs";
+import type { WslExecResult, WslHostProfile } from "@wsl/_types";
+import { GuardRejectionError, canonicalizeCommand, inspectWorkingDirectory, inspectWslCommand } from "@wsl/modules/guard";
 
 import { buildDistroScript, buildWslArguments, extractCwdMarker } from "./wsl-command";
 

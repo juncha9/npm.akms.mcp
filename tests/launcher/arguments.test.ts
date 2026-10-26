@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArguments } from "../src/modules/launcher/arguments";
+import { parseArguments } from "@/modules/launcher/arguments";
 
 describe("CLI arguments", () => {
     it.each([[], ["config"], ["setup"]])("opens the menu for %j", (...argumentsList) => {

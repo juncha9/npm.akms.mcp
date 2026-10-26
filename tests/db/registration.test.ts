@@ -1,16 +1,16 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Registry, entryHash, formatResults } from "../src/modules/registration/registry";
-import { ManagedSession, registrationMenu, importMenu, syncMenu } from "../src/modules/registration/menu";
-import { Prompter } from "../src/modules/manage/prompter";
-import type { ConfigTarget, McpServerEntry } from "../src/modules/registration/types";
-import { createJsonFileTarget } from "../src/modules/manage/targets/json-file";
-import { parseMcpServersToml, writeMcpServerToml } from "../src/modules/manage/targets/toml-subset";
-import { updateConfigFile } from "../src/modules/manage/targets/config-file";
+import { Registry, entryHash, formatResults } from "@/modules/registration/registry";
+import { ManagedSession, registrationMenu, importMenu, syncMenu } from "@/modules/registration/menu";
+import { Prompter } from "@db/modules/manage/prompter";
+import type { ConfigTarget, McpServerEntry } from "@/modules/registration/types";
+import { createJsonFileTarget } from "@db/modules/manage/targets/json-file";
+import { parseMcpServersToml, writeMcpServerToml } from "@db/modules/manage/targets/toml-subset";
+import { updateConfigFile } from "@db/modules/manage/targets/config-file";
 
 let directory: string;
 let registry: Registry;

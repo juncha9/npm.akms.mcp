@@ -1,4 +1,4 @@
-import type { GuardVerdict } from "@/_types";
+import type { GuardVerdict } from "@ssh/_types";
 
 /**
  * Thrown when a guard refuses an operation.

@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createS3CatalogServer as createCatalog } from "../src/server";
-import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "../src/modules/registration/catalog";
+import { createS3CatalogServer as createCatalog } from "@s3/server";
+import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "@/modules/registration/catalog";
 
 const kind = "s3" as const;
 const baseTools = ["s3_info","s3_list","s3_stat","s3_read","s3_write","s3_upload","s3_download","s3_delete"];

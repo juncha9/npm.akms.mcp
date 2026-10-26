@@ -1,10 +1,10 @@
 import { Registry, sessionName } from "./registry";
 import { CLIENT_LABELS } from "./types";
 import { plainText, writeWrapped } from "./comparison";
-import { Prompter, PromptBackError, PromptClosedError } from "./prompter";
+import { PromptBackError, PromptClosedError, type RegistrationPrompter } from "./prompter";
 
 /** Review all registry format steps before any saved settings are changed. */
-export async function migrationMenu(prompter: Prompter, registry: Registry): Promise<void> {
+export async function migrationMenu(prompter: RegistrationPrompter, registry: Registry): Promise<void> {
     try {
         prompter.clearScreen();
         const plan = registry.planMigration();

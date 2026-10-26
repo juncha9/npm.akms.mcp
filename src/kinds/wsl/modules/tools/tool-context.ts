@@ -1,9 +1,9 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { SINGLE_HOST_ENV } from "@/_defs";
-import { $logger } from "@/_libs";
-import { GuardRejectionError } from "@/modules/guard";
-import { WslHost, WslSession, WslSessionManager } from "@/modules/wsl";
+import { SINGLE_HOST_ENV } from "@wsl/_defs";
+import { $logger } from "@wsl/_libs";
+import { GuardRejectionError } from "@wsl/modules/guard";
+import { WslHost, WslSession, WslSessionManager } from "@wsl/modules/wsl";
 
 import { formatGuardRejection } from "./format";
 

@@ -2,11 +2,11 @@ import type { Registry } from "./registry";
 import { packageName, runtimeIsOlder } from "./runtime";
 import { writeWrapped } from "./comparison";
 import { redactStartupText } from "./startup-check";
-import { Prompter, PromptBackError, PromptClosedError } from "./prompter";
+import { PromptBackError, PromptClosedError, type RegistrationPrompter } from "./prompter";
 import { KINDS, type McpKind } from "./types";
 
 /** Query only on entry or explicit Refresh. Main menus remain offline and immediate. */
-export async function updatesMenu(prompter: Prompter, registry: Registry): Promise<void> {
+export async function updatesMenu(prompter: RegistrationPrompter, registry: Registry): Promise<void> {
     const kinds = KINDS.filter(kind => kind !== "wsl" || process.platform === "win32");
     const latest = new Map<McpKind, string | null>();
     const refresh = async () => {

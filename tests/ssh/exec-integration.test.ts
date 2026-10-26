@@ -4,9 +4,9 @@ import type { AddressInfo } from "node:net";
 import ssh2 from "ssh2";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { CWD_MARKER } from "@/_defs";
-import type { SshHostProfile } from "@/_types";
-import { SshConnection, SshSessionManager } from "@/modules/ssh";
+import { CWD_MARKER } from "@ssh/_defs";
+import type { SshHostProfile } from "@ssh/_types";
+import { SshConnection, SshSessionManager } from "@ssh/modules/ssh";
 
 import { createPolicy } from "./_helpers";
 

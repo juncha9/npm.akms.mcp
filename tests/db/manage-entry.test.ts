@@ -2,9 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { DbSetupAnswers } from "@/_types";
-import { answersToEntry, entryToAnswers, isOurEntry, summarizeEntry } from "@/modules/manage/entry";
-import { loadDbProfile } from "@/modules/profile";
+import type { DbSetupAnswers } from "@db/_types";
+import { answersToEntry, entryToAnswers, isOurEntry, summarizeEntry } from "@db/modules/manage/entry";
+import { loadDbProfile } from "@db/modules/profile";
 
 function createAnswers(overrides?: Partial<DbSetupAnswers>): DbSetupAnswers {
     return {

@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { describe, expect, it } from "vitest";
-import { describeError } from "@/_libs/text";
-import { ChannelSocket } from "@/modules/tunnel/channel-socket";
+import { describeError } from "@db/_libs/text";
+import { ChannelSocket } from "@db/modules/tunnel/channel-socket";
 
 describe("describeError", () => {
     it("reads the reasons out of the empty AggregateError a refused connect to localhost throws", () => {

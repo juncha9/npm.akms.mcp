@@ -1,7 +1,7 @@
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CheckProgress } from "@/modules/manage/check-progress";
-import { displayWidth } from "@/modules/manage/prompter";
+import { CheckProgress } from "@wsl/modules/manage/check-progress";
+import { displayWidth } from "@wsl/modules/manage/prompter";
 
 function terminal(columns = 80, isTTY = true) {
     const output = Object.assign(new PassThrough(), { isTTY, columns });

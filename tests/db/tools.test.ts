@@ -2,7 +2,7 @@ import { Worker } from "node:worker_threads";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createDbMcpServer, type DbMcpServerInstance } from "@/server";
+import { createDbMcpServer, type DbMcpServerInstance } from "@db/server";
 import { startPgliteServer, type PgliteServer } from "./support/pglite-server";
 
 // The tools as an agent sees them: a real MCP client over an in-memory transport, the real

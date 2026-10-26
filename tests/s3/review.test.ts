@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadS3Profile } from "../src/profile";
-import { S3Store } from "../src/store";
-import { runTargetConfigCommand as runConfigCommand } from "../src/modules/manage";
-import { createJsonFileTarget } from "../src/modules/manage/targets/json-file";
-import type { ConfigTarget, McpServerEntry } from "../src/_types";
+import { loadS3Profile } from "@s3/profile";
+import { S3Store } from "@s3/store";
+import { runTargetConfigCommand as runConfigCommand } from "@s3/modules/manage";
+import { createJsonFileTarget } from "@s3/modules/manage/targets/json-file";
+import type { ConfigTarget, McpServerEntry } from "@s3/_types";
 import { fixture } from "./fixture";
 
 let remote: Awaited<ReturnType<typeof fixture>>;

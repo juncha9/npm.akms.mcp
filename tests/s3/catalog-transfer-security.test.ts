@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { loadS3Profile } from "../src/profile";
-import { openDownload, openUpload } from "../src/local-files";
+import { loadS3Profile } from "@s3/profile";
+import { openDownload, openUpload } from "@s3/local-files";
 
 let directory: string;
 beforeEach(() => { directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-s3-catalog-path-")); vi.stubEnv("AKMS_MCP_HOME", directory); });

@@ -2,9 +2,9 @@ import fs from "node:fs";
 import { createHash } from "node:crypto";
 import type { Duplex } from "node:stream";
 import type { Client, ConnectConfig } from "ssh2";
-import { SSH_KEEPALIVE_INTERVAL_MS } from "@/_defs";
-import type { SshTunnelProfile } from "@/_types";
-import { $logger } from "@/_libs/logger";
+import { SSH_KEEPALIVE_INTERVAL_MS } from "@db/_defs";
+import type { SshTunnelProfile } from "@db/_types";
+import { $logger } from "@db/_libs/logger";
 
 const WINDOWS_AGENT_PIPE = "\\\\.\\pipe\\openssh-ssh-agent";
 

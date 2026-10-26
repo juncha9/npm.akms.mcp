@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { analyzeSegment, inspectCommand, splitCommandSegments, stripQuotedText } from "@/modules/guard";
+import { analyzeSegment, inspectCommand, splitCommandSegments, stripQuotedText } from "@ssh/modules/guard";
 
 import { createPolicy, denyPatterns } from "./_helpers";
 

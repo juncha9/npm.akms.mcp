@@ -8,7 +8,7 @@ export { updatesMenu } from "./updates-menu";
 import type { ImportCandidate, SyncResult } from "./registry";
 import { CLIENT_LABELS } from "./types";
 import type { ClientId, ConfigTarget, McpKind, McpServerEntry } from "./types";
-import { Prompter, PromptBackError, PromptClosedError } from "./prompter";
+import { PromptBackError, PromptClosedError, type RegistrationPrompter } from "./prompter";
 import type { SelectItem } from "./prompter";
 
 function pendingImports(registry: Registry, kind?: McpKind): { names: string[]; differing: number } {
@@ -20,7 +20,7 @@ function pendingImports(registry: Registry, kind?: McpKind): { names: string[]; 
 
 export type ManagementMode = "config" | "register" | "sync";
 
-function preview(prompter: Prompter, entry: McpServerEntry | null): void {
+function preview(prompter: RegistrationPrompter, entry: McpServerEntry | null): void {
     if(!entry) { prompter.write("  Remove this connection from the service.\n"); return; }
     // Arguments may also contain credentials in imported commands. Only env keys and
     // familiar non-secret endpoint fields are shown in a registration/conflict preview.
@@ -36,7 +36,7 @@ export class ManagedSession {
         this.target = this.registry.target(options.kind);
     }
 
-    async initialize(prompter: Prompter): Promise<boolean> {
+    async initialize(prompter: RegistrationPrompter): Promise<boolean> {
         const { mode = "config", targetId } = this.options;
         if(targetId && !this.registry.targets.some((item) => item.id === targetId)) throw new Error("Unknown AI service. Use claude-code, codex, claude-desktop or cursor.");
         if(mode === "sync") { await syncMenu(prompter, this.registry); return false; }
@@ -48,7 +48,7 @@ export class ManagedSession {
         return true;
     }
 
-    writeStatus(prompter: Prompter): void {
+    writeStatus(prompter: RegistrationPrompter): void {
         const state = this.registry.read();
         if(this.registry.needsMigration(state)) prompter.write(prompter.paint.warning("Registry update available. Choose Migrate registry to review the changes.\n"));
         prompter.write(`Services: ${state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || "none"}\n`);
@@ -91,17 +91,17 @@ export class ManagedSession {
         }
     }
 
-    async prepareRuntime(prompter: Prompter, existing?: McpServerEntry): Promise<boolean> {
+    async prepareRuntime(prompter: RegistrationPrompter, existing?: McpServerEntry): Promise<boolean> {
         if(existing && !standardLaunch(existing, this.options.kind)) return true;
         return prepareRuntime(prompter, this.registry, this.options.kind, this.options.version);
     }
 
-    async checkSaved(prompter: Prompter, name: string, before?: McpServerEntry): Promise<void> {
+    async checkSaved(prompter: RegistrationPrompter, name: string, before?: McpServerEntry): Promise<void> {
         const saved = this.registry.read().connections[name]?.entry;
         if(saved && (!before || entryHash(saved) !== entryHash(before))) await this.registry.checkSaved(prompter, [name]);
     }
 
-    async handle(action: string, prompter: Prompter): Promise<boolean> {
+    async handle(action: string, prompter: RegistrationPrompter): Promise<boolean> {
         if(action === "add" && !this.registry.read().clients.length) {
             prompter.write("\nRegister an AI service first: open Register, select at least one service, then Apply registration.\n");
             await prompter.acknowledge();
@@ -119,7 +119,7 @@ export class ManagedSession {
     }
 }
 
-export async function registrationMenu(prompter: Prompter, registry: Registry, initialClient?: ClientId): Promise<boolean> {
+export async function registrationMenu(prompter: RegistrationPrompter, registry: Registry, initialClient?: ClientId): Promise<boolean> {
     const initial = registry.read();
     const selected = new Set(initial.clients);
     if(initialClient) selected.add(initialClient);
@@ -205,7 +205,7 @@ export async function registrationMenu(prompter: Prompter, registry: Registry, i
     }
 }
 
-export async function importMenu(prompter: Prompter, registry: Registry, kind?: McpKind): Promise<void> {
+export async function importMenu(prompter: RegistrationPrompter, registry: Registry, kind?: McpKind): Promise<void> {
     for(;;) {
         prompter.clearScreen();
         prompter.write("Import existing connections\n\n");
@@ -268,7 +268,7 @@ export async function importMenu(prompter: Prompter, registry: Registry, kind?: 
     }
 }
 
-export async function syncMenu(prompter: Prompter, registry: Registry): Promise<void> {
+export async function syncMenu(prompter: RegistrationPrompter, registry: Registry): Promise<void> {
     let pendingResults: SyncResult[] | undefined;
     for(;;) {
         prompter.clearScreen();

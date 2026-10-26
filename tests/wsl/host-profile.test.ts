@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SINGLE_HOST_ENV } from "@/_defs";
-import { loadHostProfile, toHostSummary } from "@/modules/config";
+import { SINGLE_HOST_ENV } from "@wsl/_defs";
+import { loadHostProfile, toHostSummary } from "@wsl/modules/config";
 
 process.env.WSL_MCP_LOG_LEVEL = "silent";
 

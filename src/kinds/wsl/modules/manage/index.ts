@@ -1,11 +1,11 @@
-import { SERVER_VERSION } from "@/_defs";
-import type { Registry } from "../registration/registry";
-import { ManagedSession } from "../registration/menu";
-import type { ManagementMode } from "../registration/menu";
+import { SERVER_VERSION } from "@wsl/_defs";
+import type { Registry } from "@/modules/registration/registry";
+import { ManagedSession } from "@/modules/registration/menu";
+import type { ManagementMode } from "@/modules/registration/menu";
 import type { Readable, Writable } from "node:stream";
 
-import type { ConfigTarget, ConfigWriteResult, HostSetupAnswers, McpServerEntry, WslDistroListing } from "@/_types";
-import { listDistros } from "@/modules/wsl";
+import type { ConfigTarget, ConfigWriteResult, HostSetupAnswers, McpServerEntry, WslDistroListing } from "@wsl/_types";
+import { listDistros } from "@wsl/modules/wsl";
 
 import { profileFromEnv, runDistroCheck } from "./connection-check";
 import { copyEntryToClient } from "./copy-entry";

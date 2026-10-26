@@ -1,27 +1,7 @@
 import type { Readable, Writable } from "node:stream";
+import { PromptBackError, PromptClosedError } from "@/modules/prompt-errors";
 
-/**
- * Input ended before a prompt was answered — Ctrl+D, Ctrl+C, or a piped script running out.
- * The `config` loop treats it as leaving, not as a failure.
- */
-export class PromptClosedError extends Error {
-    constructor() {
-        super("input closed before the prompt was answered");
-        this.name = "PromptClosedError";
-    }
-}
-
-/**
- * The user pressed Esc: leave this prompt without answering and go back one level. Every
- * prompt throws it, so a caller that opened a sub-screen (a field editor, a confirmation)
- * returns to where it was with nothing changed. Off a TTY a line of just `ESC` means the same.
- */
-export class PromptBackError extends Error {
-    constructor() {
-        super("prompt left with esc");
-        this.name = "PromptBackError";
-    }
-}
+export { PromptBackError, PromptClosedError };
 
 export interface SelectChoice<T extends string> {
     value: T;

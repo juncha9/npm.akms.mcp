@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 
-import { WSL_EXECUTABLE } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { WslDistroListing, WslDistroStatus } from "@/_types";
+import { WSL_EXECUTABLE } from "@wsl/_defs";
+import { $logger } from "@wsl/_libs";
+import type { WslDistroListing, WslDistroStatus } from "@wsl/_types";
 
 import type { WslHost } from "./wsl-host";
 

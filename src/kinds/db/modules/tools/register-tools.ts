@@ -1,15 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { connectionTools } from "../session-server";
+import { connectionTools } from "@/modules/session-server";
 import { z } from "zod";
-import { CATALOG_MAX_ROWS, DB_ENV } from "@/_defs";
-import type { DbProfile, DbSummary, ExecuteResult } from "@/_types";
-import { $logger } from "@/_libs/logger";
-import { describeError, truncateOutput } from "@/_libs/text";
-import { formatGuardRejection, GuardRejectionError } from "@/modules/guard/guard-error";
-import { checkStatements } from "@/modules/guard/rules";
-import { describeRelation, findSchemas, listRelations, listSchemas, readSearchPath } from "@/modules/postgres/catalog";
-import { CallCancelledError, CommitError, type PostgresDriver, StatementError } from "@/modules/postgres/postgres-driver";
-import { toDbSummary } from "@/modules/profile";
+import { CATALOG_MAX_ROWS, DB_ENV } from "@db/_defs";
+import type { DbProfile, DbSummary, ExecuteResult } from "@db/_types";
+import { $logger } from "@db/_libs/logger";
+import { describeError, truncateOutput } from "@db/_libs/text";
+import { formatGuardRejection, GuardRejectionError } from "@db/modules/guard/guard-error";
+import { checkStatements } from "@db/modules/guard/rules";
+import { describeRelation, findSchemas, listRelations, listSchemas, readSearchPath } from "@db/modules/postgres/catalog";
+import { CallCancelledError, CommitError, type PostgresDriver, StatementError } from "@db/modules/postgres/postgres-driver";
+import { toDbSummary } from "@db/modules/profile";
 import {
     formatDbSummary,
     formatExecuteResult,

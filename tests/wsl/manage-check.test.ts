@@ -1,10 +1,10 @@
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runDistroCheck } from "@/modules/manage/connection-check";
-import { WslHost, probeDistroFacts, queryDistroListing } from "@/modules/wsl";
+import { runDistroCheck } from "@wsl/modules/manage/connection-check";
+import { WslHost, probeDistroFacts, queryDistroListing } from "@wsl/modules/wsl";
 import { createProfile } from "./_helpers";
 
-vi.mock("@/modules/wsl", () => ({
+vi.mock("@wsl/modules/wsl", () => ({
     WslHost: class { async exec() { throw new Error("unexpected user probe"); } },
     queryDistroListing: vi.fn(),
     probeDistroFacts: vi.fn(),
@@ -34,7 +34,7 @@ function terminal() {
 
 describe("animated distro checks", () => {
     it("waits for the user probe before moving to distribution information", async () => {
-        const probe = { stdout: "uid=0(root)", stderr: "", exitCode: 0, durationMs: 1, truncated: false };
+        const probe = { stdout: "uid=0(root)", stderr: "", exitCode: 0, durationMs: 1, truncated: false, timedOut: false };
         let finishProbe!: (value: typeof probe) => void;
         // Install the same pending probe on every host constructed by the check.
         vi.spyOn(WslHost.prototype, "exec").mockImplementation(() => new Promise((resolve) => { finishProbe = resolve; }));

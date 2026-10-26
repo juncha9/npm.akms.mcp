@@ -9,10 +9,10 @@ import { PassThrough } from "node:stream";
 import ssh2 from "ssh2";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { ConfigTarget, McpServerEntry } from "@/_types";
-import { runTargetConfigCommand as runConfigCommand } from "@/modules/manage";
-import { createJsonFileTarget } from "@/modules/manage/targets/json-file";
-import { toHostKeyFingerprint } from "@/modules/ssh/ssh-connection";
+import type { ConfigTarget, McpServerEntry } from "@ssh/_types";
+import { runTargetConfigCommand as runConfigCommand } from "@ssh/modules/manage";
+import { createJsonFileTarget } from "@ssh/modules/manage/targets/json-file";
+import { toHostKeyFingerprint } from "@ssh/modules/ssh/ssh-connection";
 
 process.env.SSH_MCP_LOG_LEVEL = "silent";
 

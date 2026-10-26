@@ -1,7 +1,7 @@
 import { Worker } from "node:worker_threads";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SqlParser, SqlParserUnavailableError } from "@/modules/guard/sql-parser";
-import { parseStatementsWithParser } from "@/modules/guard/parse";
+import { SqlParser, SqlParserUnavailableError } from "@db/modules/guard/sql-parser";
+import { parseStatementsWithParser } from "@db/modules/guard/parse";
 
 const parsers: SqlParser[] = [];
 function deferred() {

@@ -1,4 +1,4 @@
-import type { WslHostProfile, WslPolicy } from "@/_types";
+import type { WslHostProfile, WslPolicy } from "@wsl/_types";
 
 /** Default policy: permissive, matching what an unconfigured distro resolves to. */
 export function createPolicy(overrides?: Partial<WslPolicy>): WslPolicy {

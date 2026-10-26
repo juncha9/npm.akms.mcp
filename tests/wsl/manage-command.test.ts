@@ -5,10 +5,10 @@ import { PassThrough } from "node:stream";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { ConfigTarget, McpServerEntry, WslDistroListing } from "@/_types";
-import { runTargetConfigCommand as runConfigCommand } from "@/modules/manage";
-import { createJsonFileTarget } from "@/modules/manage/targets/json-file";
-import { listDistros } from "@/modules/wsl";
+import type { ConfigTarget, McpServerEntry, WslDistroListing } from "@wsl/_types";
+import { runTargetConfigCommand as runConfigCommand } from "@wsl/modules/manage";
+import { createJsonFileTarget } from "@wsl/modules/manage/targets/json-file";
+import { listDistros } from "@wsl/modules/wsl";
 
 import { LIVE_DISTRO, LIVE_ENABLED, LIVE_USER } from "./_helpers";
 

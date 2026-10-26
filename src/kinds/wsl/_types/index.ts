@@ -7,4 +7,4 @@ export type {
     ConfigWriteResult,
     ConfigTarget,
 } from "./manage";
-export type { GuardVerdict } from "@akms/mcp-ssh";
+export type { GuardVerdict } from "@ssh/index";

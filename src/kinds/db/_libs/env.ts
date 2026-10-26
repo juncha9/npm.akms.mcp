@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { FALSY_ENV_VALUES, TRUTHY_ENV_VALUES } from "@/_defs";
+import { FALSY_ENV_VALUES, TRUTHY_ENV_VALUES } from "@db/_defs";
 
 // A malformed value fails startup instead of being read as "not set" —
 // `DB_READONLY=ture` must not quietly mean "writable".

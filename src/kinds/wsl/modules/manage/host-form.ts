@@ -1,6 +1,6 @@
 import type { Writable } from "node:stream";
 
-import type { HostSetupAnswers, WslDistroListing } from "@/_types";
+import type { HostSetupAnswers, WslDistroListing } from "@wsl/_types";
 
 import { profileFromEnv, runDistroCheck } from "./connection-check";
 import { SERVER_NAME_PATTERN, answersToEntry } from "./entry";
@@ -404,7 +404,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
         let cursor: FormValue = "distro";
 
         for (;;) {
-            const picked = await prompter.select(title, buildRows(state, destination), { defaultValue: cursor, cancelValue: "cancel" });
+            const picked: FormValue = await prompter.select(title, buildRows(state, destination), { defaultValue: cursor, cancelValue: "cancel" });
 
             // Esc inside anything the pick opened — a field editor, a confirmation, the
             // typed-name question — comes back here as PromptBackError, and the cursor stays on

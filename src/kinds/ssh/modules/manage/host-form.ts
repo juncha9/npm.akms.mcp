@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import type { Writable } from "node:stream";
 
-import { DEFAULT_SSH_PORT } from "@/_defs";
-import { expandHomePath } from "@/_libs";
-import type { HostAuthMethod, HostSetupAnswers } from "@/_types";
+import { DEFAULT_SSH_PORT } from "@ssh/_defs";
+import { expandHomePath } from "@ssh/_libs";
+import type { HostAuthMethod, HostSetupAnswers } from "@ssh/_types";
 
 import { profileFromEnv, runConnectionCheck } from "./connection-check";
 import { SERVER_NAME_PATTERN, answersToEntry } from "./entry";
@@ -832,7 +832,7 @@ export async function runHostForm(prompter: Prompter, output: Writable, options:
         let cursor: FormValue = "host";
 
         for (;;) {
-            const picked = await prompter.select(title, buildRows(state, destination), { defaultValue: cursor, cancelValue: "cancel" });
+            const picked: FormValue = await prompter.select(title, buildRows(state, destination), { defaultValue: cursor, cancelValue: "cancel" });
 
             // Esc inside anything the pick opened — a field editor, a confirmation, a
             // follow-up question — comes back here as PromptBackError. The form is restored to

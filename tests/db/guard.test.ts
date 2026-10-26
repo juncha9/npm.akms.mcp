@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { DbPolicy } from "@/_types";
-import { formatGuardRejection, GuardRejectionError } from "@/modules/guard/guard-error";
-import { parseStatements } from "@/modules/guard/parse";
-import { changesSchema, checkStatements, isDdlKind, writesData } from "@/modules/guard/rules";
+import type { DbPolicy } from "@db/_types";
+import { formatGuardRejection, GuardRejectionError } from "@db/modules/guard/guard-error";
+import { parseStatements } from "@db/modules/guard/parse";
+import { changesSchema, checkStatements, isDdlKind, writesData } from "@db/modules/guard/rules";
 
 function policy(overrides: Partial<DbPolicy> = {}): DbPolicy {
     return {

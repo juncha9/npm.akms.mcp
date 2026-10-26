@@ -6,7 +6,7 @@ import { CLIENT_LABELS, KINDS } from "./types";
 import { findGlobalRuntime, installGlobalRuntime, latestRuntimeVersion, launchKind, runtimeInstallCommand, standardLaunch, catalogLaunch } from "./runtime";
 import type { GlobalRuntime } from "./runtime";
 import { checkConnections, checkStartup } from "./startup-check";
-import type { Prompter } from "./prompter";
+import type { RegistrationPrompter } from "./prompter";
 import { defaultCatalogPath, maxConnectionNameLength } from "./catalog";
 import type { ClientId, ConfigTarget, ConfigWriteResult, McpKind, McpServerEntry } from "./types";
 
@@ -250,7 +250,7 @@ export class Registry {
         state.sessions[plan.kind] = { mode: plan.mode, entry: plan.entry, applied: state.sessions[plan.kind]?.applied ?? {} };
     }
 
-    async checkSaved(prompter: Prompter, names: string[]): Promise<void> {
+    async checkSaved(prompter: RegistrationPrompter, names: string[]): Promise<void> {
         const state = this.read();
         const entries: { name: string; entry: McpServerEntry; prefixes?: string[]; maskEntries?: McpServerEntry[] }[] = [];
         const sessions = new Set<McpKind>();
@@ -661,7 +661,7 @@ export class Registry {
     }
 }
 
-type ResultPaint = Pick<Prompter["paint"], "success" | "warning" | "error" | "dim" | "bold">;
+type ResultPaint = Pick<RegistrationPrompter["paint"], "success" | "warning" | "error" | "dim" | "bold">;
 
 export function formatResults(results: SyncResult[], prefix = "", options: { connectionCount?: number; paint?: ResultPaint; reviewHint?: string } = {}): string {
     const plain = (text: string) => text;

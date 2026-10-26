@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { runCliCommand, toClaudeAddJsonPayload } from "@/modules/manage/targets/claude-code";
+import { runCliCommand, toClaudeAddJsonPayload } from "@wsl/modules/manage/targets/claude-code";
 
 /**
  * The template npm writes for every global bin on Windows (`claude.cmd` included). It

@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { parse, TomlError } from "smol-toml";
-import type { McpServerEntry } from "@/_types";
+import type { McpServerEntry } from "@db/_types";
 import { readMcpServersJson } from "./json-file";
 
 type Document = Record<string, unknown>;

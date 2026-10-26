@@ -1,5 +1,5 @@
-import type { ParsedStatement } from "@/_types";
-import { describeError } from "@/_libs/text";
+import type { ParsedStatement } from "@db/_types";
+import { describeError } from "@db/_libs/text";
 import { GuardRejectionError } from "./guard-error";
 import { SqlParser, SqlParserUnavailableError, type RawStatement } from "./sql-parser";
 

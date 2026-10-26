@@ -1,5 +1,5 @@
-import type { DbSummary, ExecuteResult, StatementResult } from "@/_types";
-import type { CatalogRows, RelationDescription } from "@/modules/postgres/catalog";
+import type { DbSummary, ExecuteResult, StatementResult } from "@db/_types";
+import type { CatalogRows, RelationDescription } from "@db/modules/postgres/catalog";
 
 // Text for the model. Rows are one JSON object per line: compact, unambiguous about types
 // (strings quoted, null as null), and easy to read back without a table renderer.

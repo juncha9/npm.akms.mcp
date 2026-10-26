@@ -9,9 +9,9 @@ import {
     FALSY_ENV_VALUES,
     SINGLE_HOST_ENV,
     TRUTHY_ENV_VALUES,
-} from "@/_defs";
-import { $logger, expandHomePath } from "@/_libs";
-import type { SshHostProfile, SshHostSummary, SshPolicy } from "@/_types";
+} from "@ssh/_defs";
+import { $logger, expandHomePath } from "@ssh/_libs";
+import type { SshHostProfile, SshHostSummary, SshPolicy } from "@ssh/_types";
 
 /** Trimmed value, or undefined when the variable is unset or blank. */
 function readEnv(env: NodeJS.ProcessEnv, name: string): string | undefined {

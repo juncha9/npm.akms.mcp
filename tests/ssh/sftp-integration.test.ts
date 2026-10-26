@@ -7,7 +7,7 @@ import type { AddressInfo } from "node:net";
 import ssh2 from "ssh2";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { SshHostProfile } from "@/_types";
+import type { SshHostProfile } from "@ssh/_types";
 import {
     SshConnection,
     downloadFile,
@@ -15,7 +15,7 @@ import {
     readRemoteFile,
     uploadFile,
     writeRemoteFile,
-} from "@/modules/ssh";
+} from "@ssh/modules/ssh";
 
 import { createPolicy } from "./_helpers";
 

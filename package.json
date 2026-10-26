@@ -1,19 +1,44 @@
 {
     "name": "@akms/mcp",
     "version": "0.3.2",
-    "description": "Interactive launcher for configuring installed AKMS database, SSH, WSL and S3 MCP runtimes.",
+    "description": "MCP servers that let an AI agent work with databases, SSH hosts, WSL distros and S3 buckets — one package, one setup menu, one shared connection catalog.",
     "keywords": [
         "mcp",
         "model-context-protocol",
         "cli",
         "setup",
+        "postgres",
+        "postgresql",
+        "ssh",
+        "ssh-tunnel",
+        "wsl",
+        "s3",
+        "object-storage",
         "akms"
     ],
     "license": "MIT",
+    "homepage": "https://github.com/juncha9/npm.akms.mcp#readme",
+    "bugs": {
+        "url": "https://github.com/juncha9/npm.akms.mcp/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/juncha9/npm.akms.mcp.git"
+    },
     "type": "module",
     "bin": {
-        "akms-mcp": "lib/cli.js"
+        "akms-mcp": "lib/cli.js",
+        "akms-mcp-db": "lib/db.js",
+        "akms-mcp-ssh": "lib/ssh.js",
+        "akms-mcp-wsl": "lib/wsl.js",
+        "akms-mcp-s3": "lib/s3.js"
     },
+    "files": [
+        "lib",
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE.md"
+    ],
     "engines": {
         "node": ">=22"
     },
@@ -22,21 +47,39 @@
     },
     "scripts": {
         "prepublishOnly": "node scripts/release-guard.mjs",
-        "build": "tsc --noEmit && tsup",
+        "typecheck": "tsc -p tsconfig.json",
+        "build": "npm run typecheck && tsup",
         "dev": "tsx src/cli.ts",
         "start": "node lib/cli.js",
         "pretest": "npm run build",
         "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
         "prepack": "npm run build"
     },
+    "dependencies": {
+        "@aws-sdk/client-s3": "3.1152.0",
+        "@aws-sdk/credential-providers": "3.1152.0",
+        "@modelcontextprotocol/sdk": "^1.30.1",
+        "@smithy/node-http-handler": "4.12.1",
+        "libpg-query": "^18.1.5",
+        "pg": "^8.23.0",
+        "pg-cursor": "^2.22.0",
+        "smol-toml": "1.9.1",
+        "ssh2": "^1.17.0",
+        "zod": "^4.6.5"
+    },
     "devDependencies": {
+        "@electric-sql/pglite": "^0.5.8",
+        "@electric-sql/pglite-socket": "^0.2.11",
         "@types/node": "^24.19.0",
+        "@types/pg": "^8.23.1",
+        "@types/pg-cursor": "^2.7.2",
+        "@types/ssh2": "^1.15.6",
+        "@vitest/coverage-v8": "^4.1.11",
         "tsup": "^8.5.1",
         "tsx": "^4.23.15",
         "typescript": "^5.9.3",
         "vitest": "^4.1.11"
-    },
-    "dependencies": {
-        "smol-toml": "1.9.1"
     }
 }

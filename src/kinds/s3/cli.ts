@@ -1,4 +1,5 @@
-import { RegistryError } from "./modules/registration/registry";
+#!/usr/bin/env node
+import { RegistryError } from "@/modules/registration/registry";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createS3CatalogServer, createS3McpServer } from "./server";
 import { ConfigError, SERVER_NAME, SERVER_VERSION } from "./profile";

@@ -3,11 +3,11 @@ import { StringDecoder } from "node:string_decoder";
 
 import type { FileEntryWithStats, SFTPWrapper, Stats } from "ssh2";
 
-import { MAX_DIRECTORY_ENTRIES } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { SshRemoteEntry } from "@/_types";
-import { GuardRejectionError, inspectRemotePath } from "@/modules/guard";
-import type { RemotePathAccess } from "@/modules/guard";
+import { MAX_DIRECTORY_ENTRIES } from "@ssh/_defs";
+import { $logger } from "@ssh/_libs";
+import type { SshRemoteEntry } from "@ssh/_types";
+import { GuardRejectionError, inspectRemotePath } from "@ssh/modules/guard";
+import type { RemotePathAccess } from "@ssh/modules/guard";
 
 import type { SshConnection } from "./ssh-connection";
 

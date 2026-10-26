@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { HostSetupAnswers } from "@/_types";
-import { loadHostProfile } from "@/modules/config";
-import { answersToEntry, entryToAnswers, isOurEntry } from "@/modules/manage/entry";
+import type { HostSetupAnswers } from "@ssh/_types";
+import { loadHostProfile } from "@ssh/modules/config";
+import { answersToEntry, entryToAnswers, isOurEntry } from "@ssh/modules/manage/entry";
 
 process.env.SSH_MCP_LOG_LEVEL = "silent";
 

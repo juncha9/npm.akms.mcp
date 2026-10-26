@@ -1,15 +1,16 @@
-// Development-only release checks. Keep this file identical in all five checkouts.
+// Development-only release checks, run by prepublishOnly.
 import fs from "node:fs/promises";
 import { realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const executeFile = promisify(execFile);
-export const CHECKOUTS = ["npm.akms.mcp-db", "npm.akms.mcp-ssh", "npm.akms.mcp-wsl", "npm.akms.mcp-s3", "npm.akms.mcp"];
+
+/** Paths the build reads: a change here changes lib/ even though the path itself is not packed. */
+const BUILD_INPUTS = [/^src\//, /^package\.json$/, /^package-lock\.json$/, /^tsup\.config\.ts$/, /^tsconfig\.json$/];
 
 function parseVersion(value) {
     if(typeof value !== "string") throw new Error("Version must be a SemVer string.");
@@ -55,7 +56,7 @@ function npmCli() {
             if(resolved.endsWith(".js")) return resolved;
         } catch { /* Try the next npm installation. */ }
     }
-    throw new Error("npm was not found; latest could not be checked.");
+    throw new Error("npm was not found; the release could not be checked.");
 }
 
 export async function publishedLatest(packageDirectory, name, execute = executeFile) {
@@ -86,72 +87,26 @@ export async function publishedLatest(packageDirectory, name, execute = executeF
     }
 }
 
-async function filesWithin(directory, prefix = "") {
-    const result = [];
-    for(const entry of await fs.readdir(directory, { withFileTypes: true })) {
-        const relative = prefix + entry.name;
-        if(entry.isDirectory()) result.push(...await filesWithin(path.join(directory, entry.name), relative + "/"));
-        else if(entry.isFile()) result.push(relative);
-        else throw new Error(`Unexpected registration entry: ${relative}`);
-    }
-    return result.sort();
+/** Files `npm pack` would include, without running the prepack build. */
+export async function packedFiles(packageDirectory, execute = executeFile) {
+    const output = await execute(process.execPath, [npmCli(), "pack", "--dry-run", "--json", "--ignore-scripts"], {
+        cwd: packageDirectory, windowsHide: true, timeout: 60000, maxBuffer: 16 * 1024 * 1024,
+    });
+    const files = JSON.parse(output.stdout)?.[0]?.files;
+    if(!Array.isArray(files)) throw new Error("npm pack --dry-run returned no file list.");
+    return files.map((file) => file.path.replaceAll("\\", "/"));
 }
 
-export async function registrationDifferences(workspaceDirectory) {
-    const baseline = path.join(workspaceDirectory, CHECKOUTS[0], "src/modules/registration");
-    const expectedFiles = await filesWithin(baseline);
-    if(expectedFiles.length === 0 || !expectedFiles.includes("runtime.ts")) throw new Error("DB registration baseline is missing or empty.");
-    const differences = [];
-    for(const checkout of CHECKOUTS.slice(1)) {
-        const destination = path.join(workspaceDirectory, checkout, "src/modules/registration");
-        let actualFiles;
-        try { actualFiles = await filesWithin(destination); }
-        catch { differences.push(`${checkout}: registration directory missing or unreadable`); continue; }
-        for(const relative of expectedFiles) {
-            try {
-                let expected = (await fs.readFile(path.join(baseline, relative), "utf8")).replaceAll("\r\n", "\n");
-                if(checkout === "npm.akms.mcp" && relative === "prompter.ts") {
-                    expected = expected.replaceAll("../manage/prompter", "../launcher/prompter");
-                }
-                const actual = (await fs.readFile(path.join(destination, relative), "utf8")).replaceAll("\r\n", "\n");
-                if(actual !== expected) differences.push(`${checkout}/${relative}: differs from DB`);
-            } catch { differences.push(`${checkout}/${relative}: missing or unreadable`); }
-        }
-        for(const relative of actualFiles) {
-            // The launcher owns its client adapters; siblings use modules/manage.
-            if(checkout === "npm.akms.mcp" && (relative === "paths.ts" || relative.startsWith("targets/"))) continue;
-            if(!expectedFiles.includes(relative)) differences.push(`${checkout}/${relative}: absent from DB baseline`);
-        }
+/** `git status --porcelain -z` → changed paths; a rename reports both sides. */
+export function statusPaths(stdout) {
+    const fields = stdout.split("\0").filter(Boolean);
+    const paths = [];
+    for(let index = 0; index < fields.length; index++) {
+        const status = fields[index].slice(0, 2);
+        paths.push(fields[index].slice(3));
+        if(status[0] === "R" || status[0] === "C") paths.push(fields[++index]);
     }
-    return differences;
-}
-
-export async function installedSshProtection(packageDirectory, load = (require) => require("@akms/mcp-ssh")) {
-    const require = createRequire(path.join(packageDirectory, "package.json"));
-    const ssh = await load(require);
-    if(typeof ssh.inspectLocalPath !== "function") throw new Error("Installed @akms/mcp-ssh has no inspectLocalPath export.");
-    const temporaryRoot = path.resolve(os.tmpdir());
-    const fixture = await fs.mkdtemp(path.join(temporaryRoot, "akms-release-ssh-"));
-    try {
-        const catalog = path.join(fixture, ".akms", "mcp");
-        await fs.mkdir(catalog, { recursive: true });
-        for(const access of ["read", "write"]) {
-            for(const file of [catalog, path.join(catalog, "registry.json"), path.join(catalog, "backup.json")]) {
-                if(ssh.inspectLocalPath(file, access)?.allowed !== false) {
-                    throw new Error(`Installed @akms/mcp-ssh ${ssh.SERVER_VERSION ?? "(unknown version)"} does not protect .akms/mcp for ${access}; publish SSH first, raise the WSL dependency floor, and install it locally.`);
-                }
-            }
-            if(ssh.inspectLocalPath(path.join(fixture, "ordinary.txt"), access)?.allowed !== true) {
-                throw new Error("SSH protection probe could not verify an ordinary-path control.");
-            }
-        }
-        return `Installed @akms/mcp-ssh ${ssh.SERVER_VERSION ?? "(unknown version)"} blocks registry reads and writes.`;
-    } finally {
-        if(path.dirname(fixture) !== temporaryRoot || !path.basename(fixture).startsWith("akms-release-ssh-")) {
-            throw new Error("Refusing to remove an unexpected SSH-probe directory.");
-        }
-        await fs.rm(fixture, { recursive: true, force: true });
-    }
+    return paths;
 }
 
 export async function checkRelease(packageDirectory, dependencies = {}) {
@@ -164,10 +119,15 @@ export async function checkRelease(packageDirectory, dependencies = {}) {
         catch(error) { checks.push({ name, passed: false, detail: error instanceof Error ? error.message : String(error) }); }
     };
     await check("working_tree", async () => {
-        const result = await execute("git", ["status", "--porcelain"], { cwd: directory, windowsHide: true, timeout: 10000 });
-        const changes = result.stdout.trim();
-        if(changes) throw new Error(`Working tree is not clean (${changes.split(/\r?\n/).length} status entries). Commit reviewed release changes before publishing.`);
-        return "git status --porcelain is empty.";
+        const status = await execute("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], { cwd: directory, windowsHide: true, timeout: 10000 });
+        const changed = statusPaths(status.stdout);
+        if(changed.length === 0) return "git status is empty.";
+        const packed = new Set(await (dependencies.packedFiles ?? packedFiles)(directory, execute));
+        const blocking = changed.filter((file) => packed.has(file) || BUILD_INPUTS.some((pattern) => pattern.test(file)));
+        if(blocking.length) {
+            throw new Error(`Uncommitted changes reach the package: ${blocking.join(", ")}. Commit them before the version commit.`);
+        }
+        return `Only paths outside the package changed: ${changed.join(", ")}.`;
     });
     await check("version_vs_latest", async () => {
         parseVersion(manifest.version);
@@ -176,23 +136,6 @@ export async function checkRelease(packageDirectory, dependencies = {}) {
         if(compareVersions(manifest.version, latest) <= 0) throw new Error(`package.json ${manifest.version} is not greater than npm latest ${latest}.`);
         return `package.json ${manifest.version} > npm latest ${latest}.`;
     });
-    if(manifest.name !== "@akms/mcp") {
-        await check("server_version", async () => {
-            const versionSource = manifest.name === "@akms/mcp-s3" ? "src/profile.ts" : "src/_defs/defaults.ts";
-            const defaults = await fs.readFile(path.join(directory, versionSource), "utf8");
-            const version = /^\s*export\s+const\s+SERVER_VERSION\s*=\s*["']([^"']+)["']/m.exec(defaults)?.[1];
-            if(version !== manifest.version) throw new Error(`SERVER_VERSION ${version ?? "(missing)"} differs from package.json ${manifest.version}.`);
-            return `SERVER_VERSION matches ${manifest.version}.`;
-        });
-    }
-    await check("registration_copies", async () => {
-        const differences = await registrationDifferences(path.dirname(directory));
-        if(differences.length) throw new Error(differences.join("\n"));
-        return "All five registration copies match the DB baseline (launcher adapters excluded).";
-    });
-    if(manifest.name === "@akms/mcp-wsl") {
-        await check("wsl_ssh_registry_protection", () => installedSshProtection(directory, dependencies.loadSsh));
-    }
     return { packageName: manifest.name, checks, passed: checks.every((item) => item.passed) };
 }
 

@@ -1,8 +1,8 @@
-import { SINGLE_HOST_ENV } from "@/_defs";
-import { formatBytes } from "@/_libs";
-import type { GuardVerdict, WslDirectoryEntry, WslDistroStatus, WslExecResult, WslHostProfile, WslSessionInfo } from "@/_types";
-import { toHostSummary } from "@/modules/config";
-import type { DirectoryListing } from "@/modules/wsl";
+import { SINGLE_HOST_ENV } from "@wsl/_defs";
+import { formatBytes } from "@wsl/_libs";
+import type { GuardVerdict, WslDirectoryEntry, WslDistroStatus, WslExecResult, WslHostProfile, WslSessionInfo } from "@wsl/_types";
+import { toHostSummary } from "@wsl/modules/config";
+import type { DirectoryListing } from "@wsl/modules/wsl";
 
 const ENTRY_TYPE_MARKERS: Record<WslDirectoryEntry["type"], string> = {
     file: "-",

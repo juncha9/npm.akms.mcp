@@ -1,9 +1,9 @@
 import { setInterval, clearInterval } from "node:timers";
 
-import { SESSION_IDLE_TIMEOUT_MS, SESSION_SWEEP_INTERVAL_MS } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { WslExecResult, WslHostProfile, WslSessionInfo } from "@/_types";
-import { inspectWorkingDirectory } from "@/modules/guard";
+import { SESSION_IDLE_TIMEOUT_MS, SESSION_SWEEP_INTERVAL_MS } from "@wsl/_defs";
+import { $logger } from "@wsl/_libs";
+import type { WslExecResult, WslHostProfile, WslSessionInfo } from "@wsl/_types";
+import { inspectWorkingDirectory } from "@wsl/modules/guard";
 
 import { WslHost } from "./wsl-host";
 

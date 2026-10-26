@@ -1,6 +1,6 @@
 import { differingFields } from "./registry";
 import { displayWidth } from "./prompter";
-import type { Prompter } from "./prompter";
+import type { RegistrationPrompter } from "./prompter";
 import type { McpServerEntry } from "./types";
 
 export const visibleField = /^(DB_DRIVER|DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_SSL|DB_DESCRIPTION|SSH_HOST|SSH_PORT|SSH_USER|SSH_DESCRIPTION|WSL_DISTRO|WSL_USER|WSL_DESCRIPTION|S3_BACKEND|S3_BUCKET|S3_REGION|S3_PREFIX|S3_AUTH|S3_DESCRIPTION)$/;
@@ -19,7 +19,7 @@ const fieldName = (field: string): string => {
 };
 
 /** Wrap complete values, including Korean text, without clipping the differing suffix. */
-export function writeWrapped(prompter: Prompter, text: string, indent = "", changed?: [number, number], style?: (text: string) => string): void {
+export function writeWrapped(prompter: RegistrationPrompter, text: string, indent = "", changed?: [number, number], style?: (text: string) => string): void {
     const characters = Array.from(plainText(text));
     let line = indent;
     let width = displayWidth(indent);
@@ -52,7 +52,7 @@ function changedRange(values: string[], index: number): [number, number] | undef
     return [start, end];
 }
 
-export function compareEntries(prompter: Prompter, versions: { label: string; entry: McpServerEntry }[]): void {
+export function compareEntries(prompter: RegistrationPrompter, versions: { label: string; entry: McpServerEntry }[]): void {
     const entries = versions.map((version) => version.entry);
     const fields = differingFields(entries);
     writeWrapped(prompter, descriptionOnly(entries) ? "Description differs. Connection settings match." : `${fields.length} setting(s) differ.`);

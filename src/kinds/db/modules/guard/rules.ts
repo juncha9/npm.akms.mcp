@@ -1,4 +1,4 @@
-import type { DbPolicy, GuardRefusalKind, GuardVerdict, ParsedStatement } from "@/_types";
+import type { DbPolicy, GuardRefusalKind, GuardVerdict, ParsedStatement } from "@db/_types";
 
 // Threat model: a mistaken agent, not an adversary. A rule here reads the parse tree, so
 // `delete from t` in any casing or spacing is the same node — but a DO block's body is a

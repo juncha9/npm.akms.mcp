@@ -4,14 +4,14 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConfigTarget, McpServerEntry } from "@/_types";
+import type { ConfigTarget, McpServerEntry } from "@ssh/_types";
 
 vi.mock("node:child_process", async (importOriginal) => ({
     ...await importOriginal<typeof import("node:child_process")>(),
     spawnSync: vi.fn(),
 }));
-vi.mock("@/_libs", async (importOriginal) => ({
-    ...await importOriginal<typeof import("@/_libs")>(),
+vi.mock("@ssh/_libs", async (importOriginal) => ({
+    ...await importOriginal<typeof import("@ssh/_libs")>(),
     findExecutable: vi.fn(() => "test-claude.exe"),
 }));
 
@@ -39,7 +39,7 @@ function result(status: number) {
 
 describe("copying to Codex TOML", () => {
     beforeEach(async () => {
-        const { createCodexTarget } = await import("@/modules/manage/targets/codex");
+        const { createCodexTarget } = await import("@ssh/modules/manage/targets/codex");
         target = createCodexTarget();
         configPath = path.join(directory, ".codex", "config.toml");
         expect(target.location).toBe(configPath);
@@ -63,8 +63,8 @@ describe("copying to Codex TOML", () => {
     it("asks before overwriting a TOML entry omitted from the stdio list", async () => {
         const before = '[mcp_servers.connection]\nurl = "https://example.invalid/mcp"\n';
         fs.writeFileSync(configPath, before);
-        const { copyEntryToClient } = await import("@/modules/manage/copy-entry");
-        const { Prompter } = await import("@/modules/manage/prompter");
+        const { copyEntryToClient } = await import("@ssh/modules/manage/copy-entry");
+        const { Prompter } = await import("@ssh/modules/manage/prompter");
         const input = new PassThrough();
         const output = new PassThrough();
         let screen = "";
@@ -91,9 +91,9 @@ describe("copying to Codex TOML", () => {
 
 describe("copying to Claude Code through its CLI", () => {
     beforeEach(async () => {
-        const { findExecutable } = await import("@/_libs");
+        const { findExecutable } = await import("@ssh/_libs");
         vi.mocked(findExecutable).mockReturnValue("test-claude.exe");
-        const { createClaudeCodeTarget } = await import("@/modules/manage/targets/claude-code");
+        const { createClaudeCodeTarget } = await import("@ssh/modules/manage/targets/claude-code");
         target = createClaudeCodeTarget();
         configPath = path.join(directory, ".claude.json");
         expect(target.location).toBe(configPath);
@@ -138,9 +138,9 @@ describe("copying to Claude Code through its CLI", () => {
     });
 
     it("reports a missing CLI without exposing copied credentials", async () => {
-        const { findExecutable } = await import("@/_libs");
+        const { findExecutable } = await import("@ssh/_libs");
         vi.mocked(findExecutable).mockReturnValue(null);
-        const { createClaudeCodeTarget } = await import("@/modules/manage/targets/claude-code");
+        const { createClaudeCodeTarget } = await import("@ssh/modules/manage/targets/claude-code");
         const written = createClaudeCodeTarget().writeEntry("connection", ENTRY);
         expect(written.status).toBe("unavailable");
         expect(written.detail).not.toContain("sensitive-value");

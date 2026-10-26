@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { inspectWslCommand, inspectWslPath } from "@/modules/guard";
+import { inspectWslCommand, inspectWslPath } from "@wsl/modules/guard";
 
 import { createPolicy, createProfile } from "./_helpers";
 

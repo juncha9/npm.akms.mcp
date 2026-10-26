@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { $logger } from "@/_libs";
-import type { SshExecResult } from "@/_types";
+import { $logger } from "@ssh/_libs";
+import type { SshExecResult } from "@ssh/_types";
 
 import { formatExecResult } from "./format";
 import { resolveProfile, textResult, toToolError, withHostConnection } from "./tool-context";

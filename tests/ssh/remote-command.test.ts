@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { CWD_MARKER } from "@/_defs";
-import { quoteShellArgument, truncateOutput } from "@/_libs";
-import { buildRemoteCommand, extractCwdMarker } from "@/modules/ssh";
+import { CWD_MARKER } from "@ssh/_defs";
+import { quoteShellArgument, truncateOutput } from "@ssh/_libs";
+import { buildRemoteCommand, extractCwdMarker } from "@ssh/modules/ssh";
 
 describe("buildRemoteCommand", () => {
     it("passes the command through untouched when there is no cwd and no tracking", () => {

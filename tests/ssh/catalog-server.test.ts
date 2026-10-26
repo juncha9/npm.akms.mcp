@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createSshCatalogServer as createCatalog } from "../src/server";
-import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "../src/modules/registration/catalog";
+import { createSshCatalogServer as createCatalog } from "@ssh/server";
+import { LONGEST_TOOL_NAME_LENGTH, maxConnectionNameLength } from "@/modules/registration/catalog";
 
 const kind = "ssh" as const;
 const baseTools = ["ssh_list_hosts","ssh_connect","ssh_disconnect","ssh_list_sessions","ssh_exec","ssh_list_dir","ssh_read_file","ssh_write_file","ssh_upload","ssh_download"];

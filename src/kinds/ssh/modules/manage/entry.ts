@@ -1,6 +1,6 @@
-import { launchCommand, launchKind } from "../registration/runtime";
-import { DEFAULT_SSH_PORT, PACKAGE_NAME, SERVER_NAME, SINGLE_HOST_ENV, TRUTHY_ENV_VALUES } from "@/_defs";
-import type { HostSetupAnswers, McpServerEntry } from "@/_types";
+import { launchCommand, launchKind } from "@/modules/registration/runtime";
+import { DEFAULT_SSH_PORT, PACKAGE_NAME, SERVER_NAME, SINGLE_HOST_ENV, TRUTHY_ENV_VALUES } from "@ssh/_defs";
+import type { HostSetupAnswers, McpServerEntry } from "@ssh/_types";
 
 /**
  * The variables the wizard owns. Anything else under `SSH_*` (timeouts, deny patterns,

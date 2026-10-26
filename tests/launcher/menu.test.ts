@@ -3,14 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Registry } from "../src/modules/registration/registry";
-import { createJsonFileTarget } from "../src/modules/registration/targets/json-file";
-import type { LaunchOptions } from "../src/_types";
-import { runMenu } from "../src/modules/launcher/menu";
-import { displayWidth, Prompter, PromptClosedError } from "../src/modules/launcher/prompter";
+import { Registry } from "@/modules/registration/registry";
+import { createJsonFileTarget } from "@/modules/registration/targets/json-file";
+import type { LaunchOptions } from "@/_types";
+import { runMenu } from "@/modules/launcher/menu";
+import { displayWidth, Prompter, PromptClosedError } from "@/modules/launcher/prompter";
 
 const updates = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("../src/modules/registration/menu", async (original) => ({ ...await original<typeof import("../src/modules/registration/menu")>(), updatesMenu: updates }));
+vi.mock("@/modules/registration/menu", async (original) => ({ ...await original<typeof import("@/modules/registration/menu")>(), updatesMenu: updates }));
 
 const ESC = "\u001b";
 let directory: string;

@@ -1,7 +1,7 @@
 import os from "node:os";
 import path from "node:path";
 
-import type { ConfigTarget } from "@/_types";
+import type { ConfigTarget } from "@s3/_types";
 
 import { createClaudeCodeTarget } from "./claude-code";
 import { createCodexTarget } from "./codex";

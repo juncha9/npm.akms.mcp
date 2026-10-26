@@ -1,13 +1,13 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Registry, defaultRegistryPath } from "../src/modules/registration/registry";
-import { registrationMenu, importMenu } from "../src/modules/registration/menu";
-import { Prompter } from "../src/modules/registration/prompter";
-import type { ConfigTarget, McpKind, McpServerEntry } from "../src/modules/registration/types";
+import { Registry, defaultRegistryPath } from "@/modules/registration/registry";
+import { registrationMenu, importMenu } from "@/modules/registration/menu";
+import { Prompter } from "@/modules/registration/prompter";
+import type { ConfigTarget, McpKind, McpServerEntry } from "@/modules/registration/types";
 
 let directory: string;
 beforeEach(() => {

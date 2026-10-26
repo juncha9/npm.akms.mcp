@@ -2,10 +2,10 @@ import type pg from "pg";
 import { Worker } from "node:worker_threads";
 import Cursor from "pg-cursor";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { GuardRejectionError } from "@/modules/guard/guard-error";
-import { PARSER_IDLE_TIMEOUT_MS } from "@/modules/guard/sql-parser";
-import { loadDbProfile } from "@/modules/profile";
-import { CallCancelledError, CommitError, PostgresDriver, StatementError } from "@/modules/postgres/postgres-driver";
+import { GuardRejectionError } from "@db/modules/guard/guard-error";
+import { PARSER_IDLE_TIMEOUT_MS } from "@db/modules/guard/sql-parser";
+import { loadDbProfile } from "@db/modules/profile";
+import { CallCancelledError, CommitError, PostgresDriver, StatementError } from "@db/modules/postgres/postgres-driver";
 import { startPgliteServer, type PgliteServer } from "./support/pglite-server";
 import { startTcpProxy, type TcpProxy } from "./support/tcp-proxy";
 

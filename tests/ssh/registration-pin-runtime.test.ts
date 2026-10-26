@@ -1,16 +1,16 @@
 import fs from "node:fs";
-import { removeTempDirectory } from "./support/remove-temp-directory";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runConfigCommand } from "../src/modules/manage";
-import { Registry } from "../src/modules/registration/registry";
-import { createJsonFileTarget } from "../src/modules/manage/targets/json-file";
-import type { GlobalRuntime } from "../src/modules/registration/runtime";
+import { runConfigCommand } from "@ssh/modules/manage";
+import { Registry } from "@/modules/registration/registry";
+import { createJsonFileTarget } from "@ssh/modules/manage/targets/json-file";
+import type { GlobalRuntime } from "@/modules/registration/runtime";
 
-vi.mock("../src/modules/manage/connection-check", async (original) => ({
-    ...await original<typeof import("../src/modules/manage/connection-check")>(),
+vi.mock("@ssh/modules/manage/connection-check", async (original) => ({
+    ...await original<typeof import("@ssh/modules/manage/connection-check")>(),
     runConnectionCheck: vi.fn(async () => ({ connected: true, hostKeyFingerprint: "SHA256:test-fingerprint" })),
 }));
 let directory: string;

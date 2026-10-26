@@ -2,8 +2,7 @@
 import { parseArguments } from "./modules/launcher/arguments";
 import { runMenu, runRegistrationCommand } from "./modules/launcher/menu";
 import { launchMcp } from "./modules/launcher/npm";
-
-declare const __PACKAGE_VERSION__: string;
+import { PACKAGE_VERSION } from "./_defs";
 
 const HELP_TEXT = [
     "AKMS MCP — connection setup for Database, SSH, WSL and S3",
@@ -32,11 +31,7 @@ async function main(): Promise<void> {
         return;
     }
     if(argumentsList.showVersion == true) {
-        let version = "development";
-        if(typeof __PACKAGE_VERSION__ !== "undefined") {
-            version = __PACKAGE_VERSION__;
-        }
-        process.stdout.write(`${version}\n`);
+        process.stdout.write(`${PACKAGE_VERSION}\n`);
         return;
     }
     if(argumentsList.mcpId != null) {

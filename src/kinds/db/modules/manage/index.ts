@@ -1,10 +1,10 @@
-import type { Registry } from "../registration/registry";
-import { ManagedSession } from "../registration/menu";
-import type { ManagementMode } from "../registration/menu";
+import type { Registry } from "@/modules/registration/registry";
+import { ManagedSession } from "@/modules/registration/menu";
+import type { ManagementMode } from "@/modules/registration/menu";
 import type { Readable, Writable } from "node:stream";
-import { DB_ENV, SERVER_VERSION } from "@/_defs";
-import type { ConfigTarget, ConfigWriteResult, DbSetupAnswers, McpServerEntry } from "@/_types";
-import { describeError } from "@/_libs/text";
+import { DB_ENV, SERVER_VERSION } from "@db/_defs";
+import type { ConfigTarget, ConfigWriteResult, DbSetupAnswers, McpServerEntry } from "@db/_types";
+import { describeError } from "@db/_libs/text";
 import { profileFromEnv, runConnectionCheck } from "./connection-check";
 import { runDbForm } from "./db-form";
 import { copyEntryToClient } from "./copy-entry";

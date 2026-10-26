@@ -3,13 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerFileTools } from "../src/modules/tools/file-tools";
-import type { ToolContext } from "../src/modules/tools/tool-context";
-import { inspectLocalPath, inspectRemotePath } from "../src/modules/guard";
+import { registerFileTools } from "@ssh/modules/tools/file-tools";
+import type { ToolContext } from "@ssh/modules/tools/tool-context";
+import { inspectLocalPath, inspectRemotePath } from "@ssh/modules/guard";
 import { createPolicy, createProfile } from "./_helpers";
 
 const transfer = vi.hoisted(() => vi.fn(async () => 0));
-vi.mock("../src/modules/tools/tool-context", async (original) => ({ ...await original<typeof import("../src/modules/tools/tool-context")>(), withHostConnection: transfer }));
+vi.mock("@ssh/modules/tools/tool-context", async (original) => ({ ...await original<typeof import("@ssh/modules/tools/tool-context")>(), withHostConnection: transfer }));
 let directory: string;
 beforeEach(() => {
     directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-transfer-security-"));

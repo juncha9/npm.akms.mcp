@@ -15,8 +15,8 @@ import {
     WRAPPER_VALUE_FLAGS,
     WRITE_COMMAND_BINARIES,
     WRITE_USAGE_RULES,
-} from "@/_defs";
-import type { GuardVerdict, SshPolicy } from "@/_types";
+} from "@ssh/_defs";
+import type { GuardVerdict, SshPolicy } from "@ssh/_types";
 
 /** Membership lists as sets — these are hit once per token, per segment, per command. */
 const WRAPPER_BINARY_SET = new Set(COMMAND_WRAPPER_BINARIES);

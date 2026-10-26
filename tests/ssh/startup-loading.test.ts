@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 describe("cold process memory", () => {
     it("keeps the SSH runtime unloaded until connecting and honours disconnect during its first load", () => {
-        const entry = new URL("../src/index.ts", import.meta.url).href;
+        const entry = new URL("../../src/kinds/ssh/index.ts", import.meta.url).href;
         const script = `
             import assert from "node:assert/strict";
             import { createRequire } from "node:module";
@@ -31,7 +31,7 @@ describe("cold process memory", () => {
         `;
         const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(SSH_|NODE_OPTIONS$)/i.test(key)));
         const result = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
-            cwd: fileURLToPath(new URL("..", import.meta.url)),
+            cwd: fileURLToPath(new URL("../..", import.meta.url)),
             env: { ...env, SSH_HOST: "127.0.0.1", SSH_PORT: "1", SSH_USER: "memory", SSH_PASSWORD: "memory", SSH_MCP_LOG_LEVEL: "silent" },
             encoding: "utf8", timeout: 20000, windowsHide: true,
         });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CWD_MARKER } from "@/_defs";
-import { buildDistroScript, buildWslArguments, extractCwdMarker } from "@/modules/wsl";
+import { CWD_MARKER } from "@wsl/_defs";
+import { buildDistroScript, buildWslArguments, extractCwdMarker } from "@wsl/modules/wsl";
 
 import { createProfile } from "./_helpers";
 

@@ -2,9 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Writable } from "node:stream";
-import { DEFAULT_POSTGRES_PORT, DEFAULT_SSH_PORT, MAX_PORT } from "@/_defs";
-import type { DbDriverName, DbSetupAnswers, SshAuthMethod, SslMode } from "@/_types";
-import { expandHomePath } from "@/_libs/env";
+import { DEFAULT_POSTGRES_PORT, DEFAULT_SSH_PORT, MAX_PORT } from "@db/_defs";
+import type { DbDriverName, DbSetupAnswers, SshAuthMethod, SslMode } from "@db/_types";
+import { expandHomePath } from "@db/_libs/env";
 import { profileFromEnv, runConnectionCheck } from "./connection-check";
 import { SERVER_NAME_PATTERN, answersToEntry } from "./entry";
 import { PromptBackError } from "./prompter";
@@ -891,7 +891,7 @@ export async function runDbForm(prompter: Prompter, output: Writable, options: D
         let cursor: FormValue = "host";
 
         for(;;) {
-            const picked = await prompter.select(title, buildRows(state, destination), { defaultValue: cursor, cancelValue: "cancel" });
+            const picked: FormValue = await prompter.select(title, buildRows(state, destination), { defaultValue: cursor, cancelValue: "cancel" });
             const before = takeSnapshot(state);
 
             try {

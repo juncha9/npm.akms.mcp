@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { connectionTools } from "../session-server";
+import { connectionTools } from "@/modules/session-server";
 
 import { registerExecTools } from "./exec-tools";
 import { registerFileTools } from "./file-tools";

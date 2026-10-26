@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { findNpmCli, resolveLatestVersion } from "../src/modules/launcher/npm";
+import { findNpmCli, resolveLatestVersion } from "@/modules/launcher/npm";
 
 afterEach(() => {
     vi.unstubAllEnvs();

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { HostSetupAnswers } from "@/_types";
-import { loadHostProfile } from "@/modules/config";
-import { answersToEntry, entryToAnswers, isOurEntry } from "@/modules/manage/entry";
+import type { HostSetupAnswers } from "@wsl/_types";
+import { loadHostProfile } from "@wsl/modules/config";
+import { answersToEntry, entryToAnswers, isOurEntry } from "@wsl/modules/manage/entry";
 
 process.env.WSL_MCP_LOG_LEVEL = "silent";
 

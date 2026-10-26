@@ -1,13 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { SERVER_NAME, SERVER_VERSION } from "@/_defs";
-import { $logger } from "@/_libs";
-import type { WslHostProfile } from "@/_types";
-import { loadHostProfile } from "@/modules/config";
-import { WslHost, WslSessionManager } from "@/modules/wsl";
-import { registerAllTools } from "@/modules/tools";
-import type { ToolContext } from "@/modules/tools";
-import { createCatalogServer } from "./modules/session-server";
+import { SERVER_NAME, SERVER_VERSION } from "@wsl/_defs";
+import { $logger } from "@wsl/_libs";
+import type { WslHostProfile } from "@wsl/_types";
+import { loadHostProfile } from "@wsl/modules/config";
+import { WslHost, WslSessionManager } from "@wsl/modules/wsl";
+import { registerAllTools } from "@wsl/modules/tools";
+import type { ToolContext } from "@wsl/modules/tools";
+import { createCatalogServer } from "@/modules/session-server";
 
 export interface WslMcpServerInstance {
     server: McpServer;

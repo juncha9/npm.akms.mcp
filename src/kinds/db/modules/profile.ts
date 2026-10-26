@@ -12,11 +12,11 @@ import {
     MAX_ROWS_LIMIT,
     MAX_TIMER_MS,
     MIN_OUTPUT_CHARACTERS,
-} from "@/_defs";
-import type { DbDriverName, DbPolicy, DbProfile, DbSummary, SshTunnelProfile, SslMode } from "@/_types";
-import { $logger } from "@/_libs/logger";
-import { type EnvSource, expandHomePath, readBooleanEnv, readEnv, readIntegerEnv, readSecretEnv } from "@/_libs/env";
-import { describeError } from "@/_libs/text";
+} from "@db/_defs";
+import type { DbDriverName, DbPolicy, DbProfile, DbSummary, SshTunnelProfile, SslMode } from "@db/_types";
+import { $logger } from "@db/_libs/logger";
+import { type EnvSource, expandHomePath, readBooleanEnv, readEnv, readIntegerEnv, readSecretEnv } from "@db/_libs/env";
+import { describeError } from "@db/_libs/text";
 
 const SSL_MODES: SslMode[] = ["require", "verify", "off"];
 

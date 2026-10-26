@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { loadS3Profile, toS3Summary } from "../src/profile";
-import { checkKey, writeHeaders } from "../src/policy";
+import { loadS3Profile, toS3Summary } from "@s3/profile";
+import { checkKey, writeHeaders } from "@s3/policy";
 const aws = { S3_BUCKET: "my-bucket" };
 const compatible = { ...aws, S3_BACKEND: "compatible", S3_ENDPOINT: "https://storage.example", S3_REGION: "region-1", S3_AUTH: "static", S3_ACCESS_KEY_ID: "secret-key", S3_SECRET_ACCESS_KEY: "secret-value" };
 

@@ -61,7 +61,7 @@ List objects, inspect and edit UTF-8 content, and upload or download files in on
 
 **Runtime** installs and updates the single `@akms/mcp` runtime. Choose **Check for updates**, then **Update to <version>** when a newer release is available. Opening the main menu does not query npm: **Update available <version>** means the installed runtime is older than the setup version already running. A linked development installation is shown as such and is never offered an update.
 
-Runtime also contains **Server layout**, **Migrate registry** when changes are ready to apply, and **Remove old packages** when unused legacy installations can be removed. If migration is waiting or blocked, Runtime explains what to fix first.
+Runtime also contains **AI service entries**, **Migrate registry** when changes are ready to apply, and **Remove old packages** when unused legacy installations can be removed. While an upgrade from the separate packages is unfinished, Runtime lists its steps (install, migrate, remove old packages) and marks each done, next or blocked.
 
 The catalog directory is `~/.akms/mcp`, or `$AKMS_MCP_HOME` when set. Runtime installs below that directory:
 
@@ -74,13 +74,16 @@ Saved MCP entries start Node directly with `lib/db.js`, `lib/ssh.js`, `lib/wsl.j
 
 After saving changed settings or updating the runtime, setup checks MCP startup using `initialize` and `tools/list`. This check does not execute database, SSH, WSL or S3 tools. Fix any startup failures before reconnecting clients. Running processes keep their loaded code until restarted.
 
-## Server layout
+## AI service entries
 
-New catalogs use **one server per kind** in each AI client session. For example, six database connections share an `akms_db` entry and four SSH hosts share an `akms_ssh` entry. Different AI client sessions still have their own processes.
+This setting decides how your connections are listed in Claude Code, Codex and the other AI services.
+
+- **Grouped** (default, recommended): one entry per kind. Six database connections appear as one `akms_db` entry and four SSH hosts as one `akms_ssh` entry. Each AI client session starts one process per kind, and passwords stay in the AKMS catalog.
+- **One per connection**: each connection is its own entry, with its settings and password copied into the service's settings file. Each session starts one process per connection. Use it only if you need to switch single connections on and off in the AI client.
 
 Each server reads a catalog snapshot at startup. Tools include the saved connection name, such as `pg_main__db_query` or `remote_main__ssh_exec`. Connections open lazily; listing tools does not connect to remote services. Call `db_catalog_status`, `ssh_catalog_status`, `wsl_catalog_status` or `s3_catalog_status` to inspect loaded and skipped connections without printing credentials. If the catalog is missing or invalid, a newly started server exposes its status tool so the problem remains visible.
 
-Open **Runtime > Server layout**, select a kind, and review its layout before applying a change. **Switch to one entry per connection** restores individual entries containing their saved environment values. **Switch to one server (akms_<kind>)** combines them again. These confirmations default to **No**. The **New kinds** row changes the default for kinds you have not configured; it does not change existing kinds' choices.
+Open **Runtime > AI service entries**, select a kind, and review the change before applying it. **List each connection separately** restores individual entries with their saved environment values. **Group into akms_<kind>** combines them again. These confirmations default to **No**. The **New kinds** row changes the default for kinds you have not configured; it does not change existing kinds' choices.
 
 Connection names use ASCII letters, digits, underscores or hyphens: Database up to 35 characters, SSH/WSL up to 30, and S3 up to 37. The names `akms_db`, `akms_ssh`, `akms_wsl` and `akms_s3` are reserved.
 
@@ -104,7 +107,7 @@ Versions 0.3.x and earlier used the separate `@akms/mcp-db`, `@akms/mcp-ssh`, `@
 6. Restart or reconnect your AI clients to replace running servers.
 7. Call each kind's `*_catalog_status` tool and confirm its loaded connections. For an intentional per-connection layout, verify the individual entries and tools instead.
 
-The new target is `node .../node_modules/@akms/mcp/lib/<kind>.js`, with `--catalog` for one server per kind. Migrate registry moves old direct paths and standard npx entries. An individual entry that still uses an old kind-specific command (such as `akms-mcp-db`) is marked **launch out of date** under **Runtime > Server layout**; choose **Update launch commands** there. Custom commands and externally edited entries require review. If installation is deferred or fails, old launches are kept; install from **Runtime**, then choose **Migrate registry** there.
+The new target is `node .../node_modules/@akms/mcp/lib/<kind>.js`, with `--catalog` for grouped entries. Migrate registry moves old direct paths and standard npx entries. An individual entry that still uses an old kind-specific command (such as `akms-mcp-db`) is marked **launch out of date** under **Runtime > AI service entries**; choose **Update launch commands** there. Custom commands and externally edited entries require review. If installation is deferred or fails, old launches are kept; install from **Runtime**, then choose **Migrate registry** there.
 
 ## Upgrading from 0.2.x
 

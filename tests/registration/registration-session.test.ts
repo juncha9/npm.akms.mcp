@@ -273,7 +273,7 @@ describe("registry v2 session migration", () => {
         const { registry, targets, options } = fixture();
         await screen(["layout", "db", "catalog", "", "b", "b"], prompter => runtimeMenu(prompter, registry)); expect(registry.read().version).toBe(1);
         const text = await screen(["layout", "db", "catalog", "y", "b", "b"], prompter => runtimeMenu(prompter, registry));
-        expect(text).toContain("Switch to one server (akms_db)"); expect(text).toContain("akms_db · then remove"); expect(text).toContain("Apply this layout? (y/N)"); expect(text).toContain("OK akms_db: fixture@2.0.0");
+        expect(text).toContain("Group Database connections into akms_db"); expect(text).toContain("akms_db · then remove"); expect(text).toContain("Apply this change? (y/N)"); expect(text).toContain("OK akms_db: fixture@2.0.0");
         expect(options.check).toHaveBeenCalledExactlyOnceWith(targets[0].readEntries().akms_db);
         expect(text).not.toContain("private-original");
         options.check = vi.fn(async () => ({ ok: true, exitCode: 0, server: "fixture", version: "2.0.0", tools: 1, toolNames: ["first__db_query"], stderr: ["private-second"] }));

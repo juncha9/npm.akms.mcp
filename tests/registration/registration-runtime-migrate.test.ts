@@ -72,7 +72,7 @@ describe("Migrate registry inside Runtime", () => {
         expect(migrationStatus(registry).status).toBe("ready");
         expect(runtimeNotice(registry).notice).toContain("Registry update available");
         const text = await screen(["", "", "b"], registry);
-        expect(text).toContain("Migrate registry   step 2 · @akms/mcp-db 0.3.2 →  @akms/mcp 0.4.0");
+        expect(text).toMatch(/Migrate registry +step 2 · @akms\/mcp-db 0\.3\.2 → {2}@akms\/mcp 0\.4\.0/);
         expect(text).toMatch(/1 {2}Install @akms\/mcp +done +0\.4\.0/);
         expect(text).toMatch(/2 {2}Migrate registry +next +@akms\/mcp-db 0\.3\.2 → @akms\/mcp 0\.4\.0/);
         expect(text).toContain("Choice (2)");

@@ -10,7 +10,7 @@ Follow [Install and set up](../README.md#install-and-set-up), then open SSH from
 npx -y @akms/mcp@latest ssh
 ```
 
-Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Runtime contains installation, migration and server layout. This kind's screen manages its saved connections. See the shared [upgrade guide](../README.md#upgrading-from-03x-to-040), [server layout](../README.md#server-layout) and [catalog security](../README.md#catalog-security-and-recovery).
+Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Runtime contains installation, migration and AI service entries (grouped or one per connection). This kind's screen manages its saved connections. See the shared [upgrade guide](../README.md#upgrading-from-03x-to-040), [AI service entries](../README.md#ai-service-entries) and [catalog security](../README.md#catalog-security-and-recovery).
 
 In 0.3.x and earlier this server was distributed as `@akms/mcp-ssh` with an `akms-mcp-ssh` command. Version 0.4.0 uses `@akms/mcp` and the single `akms-mcp` command.
 
@@ -243,7 +243,7 @@ The file tools run with this server's own privileges on your machine, so `localP
 
 SSH and its crypto runtime load on the first connection instead of during idle MCP startup or local configuration work. The same loaded client supports direct, proxy and jump-host routes. Concurrent callers share the connection attempt, and disconnecting during module loading prevents a later transport from opening. The runtime stays loaded after first use; disconnecting a session closes its transport rather than unloading the module.
 
-Individual mode starts one server process per configured connection in each client session. Session mode combines that kind's connections in one stdio process per client session. Both use the dedicated runtime directly, avoiding a resident npm/npx wrapper. Choose the layout from Runtime > Server layout and reconnect clients to load it. Connections to remote services remain lazy.
+Individual mode starts one server process per configured connection in each client session. Session mode combines that kind's connections in one stdio process per client session. Both use the dedicated runtime directly, avoiding a resident npm/npx wrapper. Choose the layout from Runtime > AI service entries and reconnect clients to load it. Connections to remote services remain lazy.
 
 Restart MCP connections after updating to apply the new code. Compare process counts and Windows Private Bytes separately from resident memory (RSS), including npm wrappers in the total.
 

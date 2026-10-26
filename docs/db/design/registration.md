@@ -9,7 +9,7 @@ The single `@akms/mcp` package owns the setup menu and shared registration code.
   imports unambiguous names in one batch, merging identical old sync copies;
   differing versions stay intact until explicitly reviewed. Import rechecks the
   reviewed source values before any writes. Pending deletions are not reimported.
-- A kind's `config` screen shows its shared connections, Add and Back. Register and Sync are opened from the main setup menu; import is inside Sync, while migration and server layout are inside Runtime.
+- A kind's `config` screen shows its shared connections, Add and Back. Register and Sync are opened from the main setup menu; import is inside Sync, while migration and AI service entries are inside Runtime.
   Add without registered services shows a Register instruction and returns to
   the menu without opening a form. Saving also rechecks registration under the
   catalog lock, so unregistering during an open form cannot create local-only entries.
@@ -91,7 +91,7 @@ with no remaining steps does not save, reconcile, or rotate the backup.
 Migration converts individual kinds except explicit `sessions[kind].mode:
 "individual"` rollback choices. Missing-runtime kinds retain their legacy entries
 until Runtime installation and Sync can verify a replacement. The UI runs startup
-checks after migration, including connection-prefix coverage. Per-kind conversion and rollback remain under Runtime > Server layout.
+checks after migration, including connection-prefix coverage. Per-kind conversion and rollback remain under Runtime > AI service entries.
 
 Runtime can turn the default for new kinds off or on through
 `Registry.setDefaultMode("individual" | "catalog")`. Existing explicit choices
@@ -100,7 +100,7 @@ changed. Pending runtime setup must finish first. An explicit individual default
 is current format too, so disabling the default does not show an older-format
 notice. Version 1 and unmarked v2 require migration before changing this default.
 
-Runtime > Server layout offers **Switch to one server (akms_<kind>)**, with a per-service preview and confirmation defaulting to No. Each kind has one `akms_<kind>` entry running `node <package>/lib/<kind>.js --catalog`. Its environment is empty at the default
+Runtime > AI service entries offers **Group into akms_<kind>**, with a per-service preview and confirmation defaulting to No. Each kind has one `akms_<kind>` entry running `node <package>/lib/<kind>.js --catalog`. Its environment is empty at the default
 location, or contains only `AKMS_MCP_HOME` for an explicit catalog location.
 Register and Import keep existing version 1 files until an explicit migration or
 per-kind switch.
@@ -221,7 +221,7 @@ Evidence for the README and CLI statements:
 
 After a changed save or runtime update, setup starts each distinct saved command once and sends MCP `initialize` and `tools/list`, never `tools/call`. It verifies every saved connection's tool prefix in session mode, closes stdin and waits for exit with bounded process cleanup. Failures keep the saved state and report masked diagnostics.
 
-Runtime owns installation and updates of the single `@akms/mcp` package. Its main-menu notice compares installed and setup versions locally. `Check for updates` queries npm on demand, then offers `Update to <version>`. Linked development installations are not automatically replaced. `Server layout` contains kind-specific session/individual transitions and the default for new kinds.
+Runtime owns installation and updates of the single `@akms/mcp` package. Its main-menu notice compares installed and setup versions locally. `Check for updates` queries npm on demand, then offers `Update to <version>`. Linked development installations are not automatically replaced. `AI service entries` contains kind-specific grouped/one-per-connection transitions and the default for new kinds.
 
 ## Reconciliation and concurrent editing
 

@@ -3,8 +3,8 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { updateConfigFile } from "./config-file";
 import { CLIENT_LABELS, KINDS } from "./types";
-import { findGlobalRuntime, installGlobalRuntime, latestRuntimeVersion, launchKind, runtimeInstallCommand, standardLaunch, catalogLaunch } from "./runtime";
-import type { GlobalRuntime } from "./runtime";
+import { findGlobalRuntime, findLegacyRuntimes, installGlobalRuntime, latestRuntimeVersion, launchKind, legacyLaunch, removeLegacyRuntimes, runtimeInstallCommand, standardLaunch, catalogLaunch } from "./runtime";
+import type { GlobalRuntime, LegacyRuntime } from "./runtime";
 import { checkConnections, checkStartup } from "./startup-check";
 import type { RegistrationPrompter } from "./prompter";
 import { defaultCatalogPath, maxConnectionNameLength } from "./catalog";
@@ -39,11 +39,21 @@ export interface MigrationPlan {
     expected: string;
     steps: { id: string; label: string }[];
     kinds: { kind: McpKind; status: "convert" | "catalog" | "individual" | "pending-runtime" | "empty" | "blocked"; names: string[]; session?: SessionPlan; changes?: SessionPlan["changes"]; detail?: string }[];
+    /** Saved entries still starting a separate per-kind package; ready when @akms/mcp is installed. */
+    launches: { kind: McpKind; names: string[]; ready: boolean }[];
+}
+/** Names whose saved launch starts a separate per-kind package: the session entry first, then connections. */
+function legacyLaunches(state: RegistryState): { kind: McpKind; names: string[] }[] {
+    return KINDS.map(kind => ({ kind, names: [
+        ...(state.sessions?.[kind] && legacyLaunch(state.sessions[kind]!.entry, kind) ? [sessionName(kind)] : []),
+        ...Object.entries(state.connections).filter(([, item]) => item.kind === kind && item.entry && legacyLaunch(item.entry, kind)).map(([name]) => name),
+    ] })).filter(item => item.names.length);
 }
 // Keep steps ordered as new registry formats are introduced.
 const MIGRATION_STEPS = [
     { id: "v1_to_v2", label: "Upgrade registry version 1 to version 2", needed: (state: RegistryState) => state.version === 1 },
     { id: "catalog_default", label: "Record catalog mode as the default for new kinds", needed: (state: RegistryState) => state.defaultMode === undefined },
+    { id: "single_package", label: "Start servers from @akms/mcp instead of the separate per-kind packages", needed: (state: RegistryState) => legacyLaunches(state).length > 0 },
 ];
 export interface SyncResult {
     client: ClientId;
@@ -114,14 +124,47 @@ export class Registry {
     private backupCaptured = false;
     constructor(readonly targets: ConfigTarget[], file = defaultRegistryPath(), readonly runtimeOptions: {
         find?: (kind: McpKind) => GlobalRuntime | null;
-        install?: (kind: McpKind) => Promise<void>;
+        install?: () => Promise<void>;
         check?: typeof checkStartup;
-        latest?: typeof latestRuntimeVersion;
+        latest?: () => Promise<string | null>;
+        legacy?: () => LegacyRuntime[];
+        removeLegacy?: (kinds: McpKind[]) => Promise<void>;
     } = {}) { this.file = file; }
 
     globalRuntime(kind: McpKind): GlobalRuntime | null { return (this.runtimeOptions.find ?? findGlobalRuntime)(kind); }
 
-    latestRuntime(kind: McpKind): Promise<string | null> { return (this.runtimeOptions.latest ?? latestRuntimeVersion)(kind); }
+    /** The installed @akms/mcp, whichever kind is asked: one package carries them all. */
+    installedRuntime(): GlobalRuntime | null { return this.globalRuntime("db"); }
+
+    latestRuntime(): Promise<string | null> { return (this.runtimeOptions.latest ?? latestRuntimeVersion)(); }
+
+    /**
+     * Per-kind packages left in the runtime directory, with the services or catalog entries
+     * that still start them. A service that cannot be read counts as using every one of them.
+     */
+    legacyRuntimes(): { runtime: LegacyRuntime; usedBy: string[] }[] {
+        const state = this.read();
+        return (this.runtimeOptions.legacy ?? findLegacyRuntimes)().map(runtime => {
+            const usedBy = legacyLaunches(state).filter(item => item.kind === runtime.kind).flatMap(item => item.names.map(name => `AKMS catalog: ${name}`));
+            for(const target of this.targets) {
+                try {
+                    for(const [name, entry] of Object.entries(target.readEntries())) {
+                        // Only a direct path runs the installed package; npx keeps its own copy.
+                        const launch = catalogLaunch(entry, runtime.kind) ? { ...entry, args: entry.args.slice(0, 1) } : entry;
+                        if(legacyLaunch(launch, runtime.kind) && /^(node|nodejs)(\.exe)?$/i.test(path.basename(launch.command))) usedBy.push(`${target.label}: ${name}`);
+                    }
+                } catch { usedBy.push(`${target.label}: cannot be read`); }
+            }
+            return { runtime, usedBy };
+        });
+    }
+
+    /** Removes only packages nothing uses at the moment of removal. */
+    async removeLegacyRuntimes(kinds: McpKind[]): Promise<void> {
+        const inUse = this.legacyRuntimes().filter(item => kinds.includes(item.runtime.kind) && item.usedBy.length);
+        if(inUse.length) throw new RegistryError(`Still in use: ${inUse.map(item => item.runtime.packageName).join(", ")}. Run Migrate registry and Sync first.`);
+        await (this.runtimeOptions.removeLegacy ?? removeLegacyRuntimes)(kinds);
+    }
 
     isSessionMode(kind: McpKind, state = this.read()): boolean { return state.version === 2 && (state.sessions?.[kind]?.mode ?? state.defaultMode) === "catalog"; }
 
@@ -130,7 +173,10 @@ export class Registry {
     planMigration(): MigrationPlan {
         const state = this.read();
         const steps = MIGRATION_STEPS.filter(step => step.needed(state)).map(({ id, label }) => ({ id, label }));
-        const kinds: MigrationPlan["kinds"] = steps.length ? KINDS.map(kind => {
+        const launches = legacyLaunches(state).map(item => ({ ...item, ready: this.globalRuntime(item.kind) != null }));
+        // The session layout is reviewed per kind only while a format step changes it.
+        const layoutChanges = steps.some(step => step.id === "v1_to_v2" || step.id === "catalog_default");
+        const kinds: MigrationPlan["kinds"] = layoutChanges ? KINDS.map(kind => {
             const names = Object.entries(state.connections).filter(([, item]) => item.kind === kind && item.entry).map(([name]) => name);
             if(state.sessions?.[kind]?.mode === "individual") return { kind, names, status: "individual" };
             if(this.isSessionMode(kind, state)) return { kind, names, status: "catalog" };
@@ -155,7 +201,7 @@ export class Registry {
                 return { kind, names, status: "convert", session: this.sessionPlan(kind, "catalog", state) };
             } catch(error) { return { kind, names, status: "blocked", detail: error instanceof RegistryError ? error.message : "Cannot preview this kind. Check its runtime and catalog settings." }; }
         }) : [];
-        return { expected: JSON.stringify(state), steps, kinds };
+        return { expected: JSON.stringify(state), steps, kinds, launches };
     }
 
     applyMigration(plan: MigrationPlan): SyncResult[] {
@@ -173,9 +219,27 @@ export class Registry {
             for(const step of plan.steps) {
                 if(step.id === "v1_to_v2") { state.version = 2; state.sessions ??= {}; }
                 else if(step.id === "catalog_default") state.defaultMode = "catalog";
+                else if(step.id === "single_package") {
+                    // Kinds without the runtime keep their entries; the step stays offered until it is installed.
+                    for(const item of plan.launches) {
+                        const runtime = this.globalRuntime(item.kind);
+                        if((runtime != null) !== item.ready) throw new RegistryError("Runtime availability changed since review. Reopen Migrate registry.");
+                        if(!runtime) continue;
+                        const session = state.sessions?.[item.kind];
+                        if(session && legacyLaunch(session.entry, item.kind)) session.entry = this.sessionEntry(item.kind);
+                        for(const connection of Object.values(state.connections)) {
+                            if(connection.kind === item.kind && connection.entry && legacyLaunch(connection.entry, item.kind)) {
+                                connection.entry = { ...connection.entry, command: runtime.command, args: [...runtime.args] };
+                            }
+                        }
+                    }
+                }
                 else throw new RegistryError("Unknown registry migration step. Reopen Migrate registry.");
             }
-        }, plan.kinds.filter(item => item.status === "convert" || item.status === "pending-runtime").map(item => item.kind));
+        }, [...new Set([
+            ...plan.kinds.filter(item => item.status === "convert" || item.status === "pending-runtime").map(item => item.kind),
+            ...plan.launches.filter(item => item.ready).map(item => item.kind),
+        ])]);
     }
 
     setDefaultMode(mode: "catalog" | "individual"): SyncResult[] {
@@ -270,15 +334,16 @@ export class Registry {
         await checkConnections(prompter, entries, this.runtimeOptions.check);
     }
 
-    async installRuntime(kind: McpKind): Promise<GlobalRuntime> {
-        if(this.globalRuntime(kind)?.linked) throw new RegistryError("This is a linked development installation. Build or update its source checkout instead.");
-        await (this.runtimeOptions.install ?? installGlobalRuntime)(kind);
+    /** Installs or updates @akms/mcp, which carries every kind; returns the given kind's launch. */
+    async installRuntime(kind: McpKind = "db"): Promise<GlobalRuntime> {
+        if(this.installedRuntime()?.linked) throw new RegistryError("This is a linked development installation. Build or update its source checkout instead.");
+        await (this.runtimeOptions.install ?? installGlobalRuntime)();
         return this.requireRuntime(kind);
     }
 
     private requireRuntime(kind: McpKind): GlobalRuntime {
         const runtime = this.globalRuntime(kind);
-        if(!runtime) throw new RegistryError(`Install the AKMS runtime first: ${runtimeInstallCommand(kind)}. Then reopen Runtime.`);
+        if(!runtime) throw new RegistryError(`Install the AKMS runtime first: ${runtimeInstallCommand()}. Then reopen Runtime.`);
         return runtime;
     }
 

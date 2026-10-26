@@ -324,7 +324,8 @@ describe("PostgresDriver against PGlite", () => {
                     busyDriver.execute("SELECT pg_sleep(1)", { transaction: "commit" }).catch(() => undefined),
                     busyDriver.execute("SELECT pg_sleep(1)", { transaction: "commit" }).catch(() => undefined),
                 ];
-                await new Promise((resolve) => setTimeout(resolve, 100));
+                // Long enough for both holders to take a connection under a busy test run; they keep it for 1s.
+                await new Promise((resolve) => setTimeout(resolve, 300));
                 await expect(busyDriver.execute("SELECT 1", { transaction: "commit" })).rejects.toThrow(/all 2 database connections are busy with other calls/);
                 await Promise.all(holders);
             }

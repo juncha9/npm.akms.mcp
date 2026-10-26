@@ -8,9 +8,10 @@ import { createJsonFileTarget } from "@/modules/registration/targets/json-file";
 import type { LaunchOptions } from "@/_types";
 import { runMenu } from "@/modules/launcher/menu";
 import { displayWidth, Prompter, PromptClosedError } from "@/modules/launcher/prompter";
+import { PACKAGE_VERSION } from "@/_defs";
 
-const updates = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("@/modules/registration/menu", async (original) => ({ ...await original<typeof import("@/modules/registration/menu")>(), updatesMenu: updates }));
+const runtimeScreen = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock("@/modules/registration/runtime-menu", async (original) => ({ ...await original<typeof import("@/modules/registration/runtime-menu")>(), runtimeMenu: runtimeScreen }));
 
 const ESC = "\u001b";
 let directory: string;
@@ -18,7 +19,7 @@ beforeEach(() => {
     directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-launcher-menu-"));
     vi.stubEnv("AKMS_MCP_HOME", directory);
 });
-afterEach(() => { updates.mockClear(); vi.unstubAllEnvs(); fs.rmSync(directory, { recursive: true, force: true }); });
+afterEach(() => { runtimeScreen.mockClear(); vi.unstubAllEnvs(); fs.rmSync(directory, { recursive: true, force: true }); });
 
 function createTerminal(columns = 80) {
     const rawModes: boolean[] = [];
@@ -114,19 +115,22 @@ describe("unified menu", () => {
         output.on("data", chunk => text += chunk); input.end(`migrate\n${approved ? "y" : ""}\nquit\n`);
         const launch = vi.fn(async () => 0);
         expect(await runMenu({ input, output, registryPath: file, targets: [], launch })).toBe(0);
-        expect(text).toContain("Registry update available"); expect(text).toContain("Migrate registry and apply these changes? (y/N)"); expect(launch).not.toHaveBeenCalled();
+        expect(text).toContain("Registry update available"); expect(text).toContain("Migrate the registry and apply these changes? (y/N)"); expect(launch).not.toHaveBeenCalled();
         if(approved) { expect(JSON.parse(fs.readFileSync(file, "utf8")).defaultMode).toBe("catalog"); expect(fs.readFileSync(path.join(directory, "registry.previous.json"), "utf8")).toBe(original); }
         else expect(fs.readFileSync(file, "utf8")).toBe(original);
     });
-    it("opens the shared Updates screen and returns to the menu", async () => {
+    it("marks an older runtime beside Runtime in color, offers no Updates row and opens Runtime", async () => {
         const terminal = createTerminal();
         const launch = vi.fn(async () => 0);
-        const menu = runMenu({ input: terminal.input, output: terminal.output, targets: [], launch });
-        await press(terminal.input, "8", "\r", ESC);
+        const runtimeOptions: Registry["runtimeOptions"] = { find: () => ({ command: process.execPath, args: [path.join(directory, "db.js")], version: "0.0.1", linked: false }) };
+        const menu = runMenu({ input: terminal.input, output: terminal.output, targets: [], launch, runtimeOptions });
+        await press(terminal.input, "7", "\r", ESC);
         expect(await menu).toBe(0);
-        expect(updates).toHaveBeenCalledOnce();
+        expect(runtimeScreen).toHaveBeenCalledOnce();
         expect(launch).not.toHaveBeenCalled();
-        expect(terminal.screen()).toContain("Updates");
+        expect(terminal.screen()).toContain("@akms/mcp 0.0.1");
+        expect(terminal.screen()).toContain(`${ESC}[33m  Update available ${PACKAGE_VERSION}${ESC}[39m`);
+        expect(terminal.screen()).not.toContain("Updates");
     });
     it("persists multiple registered services and gives each setup exclusive stdin ownership", async () => {
         const terminal = createTerminal();

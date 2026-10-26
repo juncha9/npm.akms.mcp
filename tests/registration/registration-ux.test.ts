@@ -102,7 +102,7 @@ describe("registration results and next actions", () => {
         expect(sync).toContain("Review differences");
         expect(sync).not.toContain("Next: open Sync to compare settings");
         const config = await screen([], p => new ManagedSession({ kind: "ssh", targets: f.targets, registryPath: f.registry.file, runtimeOptions: f.runtimeOptions }).writeStatus(p));
-        expect(config).toContain("Open Sync to review.");
+        expect(config).toContain("Open Sync in the AKMS MCP menu.");
         for(const text of [registration, sync, config]) expect(text).not.toContain("\u001b");
     });
     it("names the retaining service when nine old entries are removed only from the other service, including pipe output", async () => {

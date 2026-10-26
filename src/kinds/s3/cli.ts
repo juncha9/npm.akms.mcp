@@ -9,14 +9,14 @@ async function main() {
     const args = process.argv.slice(2);
     if(args.length === 1 && ["--version", "-v"].includes(args[0])) { process.stderr.write(`${SERVER_VERSION}\n`); return; }
     if(args.length === 1 && ["--help", "-h"].includes(args[0])) {
-        process.stderr.write("Catalog mode: akms-mcp-s3 --catalog loads bucket connections from the shared registry.\n\n");
-        process.stderr.write("AKMS MCP S3 - one bucket per connection\n\nUsage:\n  akms-mcp-s3                         MCP stdio server\n  akms-mcp-s3 config [--target ID]     Configure a connection\n  akms-mcp-s3 register               Register AI services\n  akms-mcp-s3 sync                   Retry and review shared settings\n  akms-mcp-s3 --check                 Read-only connection check\n  akms-mcp-s3 --version\n\nTargets: claude-code, codex, claude-desktop, cursor\nConfiguration: S3_BUCKET, S3_BACKEND, S3_REGION, S3_AUTH.\nCompatible storage also requires S3_ENDPOINT and explicit S3_AUTH.\nRun config or see README for credentials, scope and transfer limits.\nCatalog: ~/.akms/mcp/registry.json (or $AKMS_MCP_HOME/registry.json) stores settings and passwords in plaintext.\n");
+        process.stderr.write("Catalog mode: node s3.js --catalog loads bucket connections from the shared registry.\n\n");
+        process.stderr.write("AKMS MCP S3 - one bucket per connection\n\nUsage:\n  node s3.js                          MCP stdio server\n  node s3.js config [--target ID]      Configure a connection (or npx -y @akms/mcp@latest s3)\n  node s3.js register                Register AI services\n  node s3.js sync                    Retry and review shared settings\n  node s3.js --check                  Read-only connection check\n  node s3.js --version\n\nTargets: claude-code, codex, claude-desktop, cursor\nConfiguration: S3_BUCKET, S3_BACKEND, S3_REGION, S3_AUTH.\nCompatible storage also requires S3_ENDPOINT and explicit S3_AUTH.\nRun config or see README for credentials, scope and transfer limits.\nCatalog: ~/.akms/mcp/registry.json (or $AKMS_MCP_HOME/registry.json) stores settings and passwords in plaintext.\n");
         return;
     }
     if(["config", "register", "sync"].includes(args[0]) && (args.length === 1 || (args.length === 3 && args[1] === "--target"))) { await runConfigCommand({ input: process.stdin, output: process.stdout, targetId: args[2], mode: args[0] as "config" | "register" | "sync" }); return; }
     if(args.length === 1 && args[0] === "--check") { process.exitCode = await runConnectionCheck(process.env, process.stdout) ? 0 : 1; return; }
     const catalogMode = args.length === 1 && args[0] === "--catalog";
-    if(args.length && !catalogMode) throw new ConfigError("Unknown arguments. Run akms-mcp-s3 --help.");
+    if(args.length && !catalogMode) throw new ConfigError("Unknown arguments. Run it with --help.");
     const instance = catalogMode ? createS3CatalogServer() : createS3McpServer();
     let closing = false;
     const shutdown = () => {

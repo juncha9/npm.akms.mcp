@@ -18,13 +18,14 @@ else if(argumentsList[0] === "install") {
         process.exitCode = 1;
     }
     else if(process.env.AKMS_TEST_NO_RUNTIME !== "1") {
-        const packageName = argumentsList.find((arg) => /^@akms\/mcp-[a-z]+@latest$/.test(arg))?.replace(/@latest$/, "");
         const prefix = argumentsList[argumentsList.indexOf("--prefix") + 1];
-        if(!packageName || !prefix.startsWith(process.env.AKMS_MCP_HOME)) throw new Error("Test installation must stay in its isolated runtime.");
-        const directory = join(prefix, ...(process.platform === "win32" ? [] : ["lib"]), "node_modules", packageName);
+        if(!argumentsList.includes("@akms/mcp@latest") || !prefix.startsWith(process.env.AKMS_MCP_HOME)) throw new Error("Test installation must stay in its isolated runtime.");
+        // One package carries every kind's entry.
+        const directory = join(prefix, ...(process.platform === "win32" ? [] : ["lib"]), "node_modules", "@akms", "mcp");
+        const kinds = ["db", "ssh", "wsl", "s3"];
         mkdirSync(join(directory, "lib"), { recursive: true });
-        writeFileSync(join(directory, "package.json"), JSON.stringify({ name: packageName, version: "9.8.7", type: "module", bin: { [packageName.replace("@akms/", "akms-")]: "lib/cli.js" } }));
-        writeFileSync(join(directory, "lib/cli.js"), readFileSync(new URL("./runtime-cli.js", import.meta.url)));
+        writeFileSync(join(directory, "package.json"), JSON.stringify({ name: "@akms/mcp", version: "9.8.7", type: "module", bin: Object.fromEntries(kinds.map((kind) => [`akms-mcp-${kind}`, `lib/${kind}.js`])) }));
+        for(const kind of kinds) writeFileSync(join(directory, "lib", `${kind}.js`), readFileSync(new URL("./runtime-cli.js", import.meta.url)));
     }
 }
 else {

@@ -86,22 +86,24 @@ describe("standalone wsl registration", () => {
         const existing = { command: "npx", args: ["-y", "@akms/mcp-wsl"], env: {} };
         for(const target of values.targets) target.writeEntry("legacy-connection", existing);
         const originals = values.targets.map((target) => fs.readFileSync(target.location, "utf8"));
-        const text = await run(values, ["register", "cursor", "claude-desktop", "a", "y", "q"]);
+        // Register lives in the AKMS MCP menu; `akms-mcp-wsl register` opens the same screen.
+        const registered = await run(values, ["cursor", "claude-desktop", "a", "y"], "register");
+        const text = registered + await run(values, ["q"]);
         expect(Object.keys(values.registry.target("wsl").readEntries())).toEqual(["legacy-connection"]);
         expect(text).toContain("Imported 1 existing connection(s)");
         expect(text).toContain("legacy-connection");
         expect(text).not.toContain("Switch client");
         values.targets.forEach((target, index) => expect(fs.readFileSync(target.location, "utf8")).toBe(originals[index]));
     });
-    it("shows all menus and blocks Add until a service is registered", async () => {
+    it("points to the AKMS MCP menu for shared settings and blocks Add until a service is registered", async () => {
         const values = fixture({ legacy: false });
         const existing = { command: "npx", args: ["-y", "@akms/mcp-wsl"], env: {} };
         values.targets[0].writeEntry("legacy-connection", existing);
         const before = fs.readFileSync(values.targets[0].location, "utf8");
         const text = await run(values, ["a", "q"]);
-        expect(text).toContain("Register");
-        expect(text).toContain("Sync");
-        expect(text).toContain("Import existing connections");
+        expect(text).toContain("Register, Sync and Runtime are in the AKMS MCP menu");
+        expect(text).toContain("Choose Register in the AKMS MCP menu");
+        expect(text).not.toContain("Import existing connections");
         expect(text).toContain("Register an AI service first");
         expect(text).not.toContain("Apply this registration?");
         expect(text).not.toContain("Save locally");

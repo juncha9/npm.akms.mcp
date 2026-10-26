@@ -1,10 +1,7 @@
 import { Registry, entryHash, entryKind, describeDifferences, sessionName } from "./registry";
 import { compareEntries, descriptionOnly, plainText, visibleField, writeWrapped } from "./comparison";
-import { prepareRuntime, runtimeMenu } from "./runtime-menu";
+import { prepareRuntime } from "./runtime-menu";
 import { standardLaunch } from "./runtime";
-import { updatesMenu } from "./updates-menu";
-import { migrationMenu } from "./migration-menu";
-export { updatesMenu } from "./updates-menu";
 import type { ImportCandidate, SyncResult } from "./registry";
 import { CLIENT_LABELS } from "./types";
 import type { ClientId, ConfigTarget, McpKind, McpServerEntry } from "./types";
@@ -27,7 +24,7 @@ function preview(prompter: RegistrationPrompter, entry: McpServerEntry | null): 
     for(const [key, value] of Object.entries(entry.env)) prompter.write(`  ${plainText(key)}: ${visibleField.test(key) ? plainText(value) : "(hidden)"}\n`);
 }
 
-/** The same screen is bundled in every standalone MCP and in the optional helper. */
+/** Status lines and the Add guard of each kind's config screen; shared settings live in the AKMS MCP menu. */
 export class ManagedSession {
     readonly registry: Registry;
     readonly target: ConfigTarget;
@@ -48,32 +45,23 @@ export class ManagedSession {
         return true;
     }
 
+    /**
+     * A kind's screen lists only its connections; Register, Sync, Runtime and Migrate live in the
+     * AKMS MCP menu, so each status line names that menu.
+     */
     writeStatus(prompter: RegistrationPrompter): void {
         const state = this.registry.read();
-        if(this.registry.needsMigration(state)) prompter.write(prompter.paint.warning("Registry update available. Choose Migrate registry to review the changes.\n"));
-        prompter.write(`Services: ${state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || "none"}\n`);
-        if(!state.clients.length) prompter.write(prompter.paint.warning("No AI services registered. Choose Register before adding a connection.\n"));
-        if(this.registry.isSessionMode(this.options.kind, state)) prompter.write(prompter.paint.dim(`Session server: ${sessionName(this.options.kind)}. Reconnect clients after changing connections.\n`));
+        const paint = prompter.paint;
+        if(!process.env.AKMS_MCP_MENU) prompter.write(paint.dim("Register, Sync and Runtime are in the AKMS MCP menu: npx -y @akms/mcp@latest\n"));
+        if(this.registry.needsMigration(state)) prompter.write(paint.warning("! Registry update available. Choose Migrate registry in the AKMS MCP menu.\n"));
+        prompter.write(`${paint.dim("Services")}  ${state.clients.map((id) => CLIENT_LABELS[id]).join(" · ") || paint.warning("none")}\n`);
+        if(!state.clients.length) prompter.write(paint.warning("! No AI services registered. Choose Register in the AKMS MCP menu before adding a connection.\n"));
+        if(this.registry.isSessionMode(this.options.kind, state)) prompter.write(`${paint.dim("Server")}    ${paint.accent(sessionName(this.options.kind))} ${paint.dim("· reconnect clients after changing connections")}\n`);
         const attention = new Set(this.registry.inspect().filter((item) => this.registry.kindForName(item.name, state) === this.options.kind
             && !["synced", "removed"].includes(item.status)).flatMap(item => item.connections ?? [item.name])).size;
-        if(attention) prompter.write(prompter.paint.warning(`Needs attention: ${attention} connection(s). Open Sync to review.\n`));
-        const pending = this.pendingImports();
-        if(pending) prompter.write(prompter.paint.warning(`Import available: ${pending} connection(s). Open Import existing connections.\n`));
-    }
-
-    private pendingImports(): number {
-        return pendingImports(this.registry, this.options.kind).names.length;
-    }
-
-    items(): SelectItem<string>[] {
-        return [
-            { value: "register", key: "register", label: "Register", hint: "AI services shared by all AKMS MCPs" },
-            { value: "sync", key: "sync", label: "Sync", hint: "review differences and retry" },
-            { value: "import", key: "import", label: "Import existing connections", hint: `${this.pendingImports()} to review` },
-            { value: "runtime", key: "runtime", label: "Runtime", hint: "installation / session server / launch commands" },
-            { value: "updates", key: "updates", label: "Updates", hint: "installed and latest runtime versions" },
-            ...(this.registry.needsMigration() ? [{ value: "migrate", key: "migrate", label: "Migrate registry", hint: "review older registry format and session layout" }] : []),
-        ];
+        if(attention) prompter.write(paint.warning(`! Needs attention: ${attention} connection(s). Open Sync in the AKMS MCP menu.\n`));
+        const pending = pendingImports(this.registry, this.options.kind).names.length;
+        if(pending) prompter.write(paint.warning(`! Import available: ${pending} connection(s). Open Sync in the AKMS MCP menu.\n`));
     }
 
     decorate(items: SelectItem<string>[]): void {
@@ -102,20 +90,13 @@ export class ManagedSession {
     }
 
     async handle(action: string, prompter: RegistrationPrompter): Promise<boolean> {
-        if(action === "add" && !this.registry.read().clients.length) {
-            prompter.write("\nRegister an AI service first: open Register, select at least one service, then Apply registration.\n");
+        if(action !== "add") return false;
+        if(!this.registry.read().clients.length) {
+            prompter.write("\nRegister an AI service first: choose Register in the AKMS MCP menu, select at least one service, then Apply registration.\n");
             await prompter.acknowledge();
             return true;
         }
-        if(action === "register") await registrationMenu(prompter, this.registry, this.options.targetId as ClientId | undefined);
-        else if(action === "sync") await syncMenu(prompter, this.registry);
-        else if(action === "import") await importMenu(prompter, this.registry, this.options.kind);
-        else if(action === "runtime") await runtimeMenu(prompter, this.registry, this.options.kind);
-        else if(action === "updates") await updatesMenu(prompter, this.registry);
-        else if(action === "migrate") await migrationMenu(prompter, this.registry);
-        else if(action === "add") return !await this.prepareRuntime(prompter);
-        else return false;
-        return true;
+        return !await this.prepareRuntime(prompter);
     }
 }
 

@@ -9,6 +9,9 @@ export interface SelectChoice<T extends string> {
     label: string;
     /** Dimmed text after the label. */
     hint?: string;
+    /** A short status after the hint, drawn in its tone's color ("Update available 0.4.1"). */
+    notice?: string;
+    noticeTone?: "success" | "warning" | "error";
     /** What a line-mode answer may type besides the number and the label; defaults to `value`. */
     key?: string;
 }
@@ -441,6 +444,9 @@ export class Prompter {
             if (item.hint != null && item.hint !== "") {
                 line += `  ${item.hint}`;
             }
+            if (item.notice != null && item.notice !== "") {
+                line += `  ${item.notice}`;
+            }
             this.output.write(`${line.trimEnd()}\n`);
         }
 
@@ -588,6 +594,9 @@ export class Prompter {
 
                 if (item.hint != null && item.hint !== "") {
                     parts.push({ text: `  ${item.hint}`, paint: this.style.dim });
+                }
+                if (item.notice != null && item.notice !== "") {
+                    parts.push({ text: `  ${item.notice}`, paint: this.style[item.noticeTone ?? "warning"] });
                 }
 
                 lines.push(this.fitLine(parts, width));

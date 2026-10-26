@@ -28,7 +28,7 @@ export function registerS3Tools(server: McpServer, store: S3Store | null, connec
         metadata: z.record(z.string(), z.string()).optional().describe("Full replacement user metadata; lowercase ASCII names, printable ASCII values, at most 2048 bytes."),
     };
     const requireStore = () => {
-        if(!store) throw new S3Error("NotConfigured", "Run akms-mcp-s3 config, or set S3_BUCKET and the connection environment variables.");
+        if(!store) throw new S3Error("NotConfigured", "Run npx -y @akms/mcp@latest s3, or set S3_BUCKET and the connection environment variables.");
         return store;
     };
     const result = async (work: () => unknown | Promise<unknown>) => {

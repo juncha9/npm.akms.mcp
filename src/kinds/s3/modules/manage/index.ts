@@ -113,7 +113,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 const choices: SelectItem<string>[] = Object.entries(entries).filter(([, entry]) => isOurEntry(entry)).map(([name, entry]) => ({ value: `entry:${name}`, key: name, label: name, hint: entry.env.S3_BUCKET }));
                 choices.push({ separator: true }, { value: "add", key: "a", label: "Add S3 connection" });
                 if(targets.length > 1) choices.push({ value: "client", key: "c", label: "Change client" });
-                if(options.management) { options.management.decorate(choices); choices.push(...options.management.items()); }
+                if(options.management) options.management.decorate(choices);
                 choices.push({ value: "quit", key: "q", label: "Quit" });
                 const selected = await prompter.select(`S3 connections - ${target.label}`, choices, { cancelValue: "quit" });
                 if(selected === "quit") return;

@@ -12,11 +12,12 @@ const HELP_TEXT = [
     `${SERVER_NAME} ${SERVER_VERSION} — MCP server for one database, directly or through an SSH tunnel`,
     "",
     "Usage:",
-    "  akms-mcp-db [--check]",
-    "  akms-mcp-db --catalog            Load database connections from the shared registry",
-    "  akms-mcp-db config [--target <client>]",
-    "  akms-mcp-db register          Register AI services for all AKMS connections",
-    "  akms-mcp-db sync              Review differences and retry pending changes",
+    "  node db.js [--check]",
+    "  node db.js --catalog             Load database connections from the shared registry",
+    "  node db.js config [--target <client>]",
+    "  node db.js register           Register AI services for all AKMS connections",
+    "  node db.js sync               Review differences and retry pending changes",
+    "  (lib/db.js of the installed @akms/mcp; the AKMS MCP menu: npx -y @akms/mcp@latest)",
     "",
     "Commands:",
     "  config               Manage the databases in the shared AKMS catalog —",
@@ -112,7 +113,7 @@ function parseArguments(argv: string[]): CliArguments {
  */
 async function runCheckCommand(profile: DbProfile | null): Promise<number> {
     if(profile == null) {
-        process.stdout.write(`No database is registered — set ${DB_ENV.DRIVER} and ${DB_ENV.URL} (or ${DB_ENV.HOST} / ${DB_ENV.NAME} / ${DB_ENV.USER}), or run: akms-mcp-db config\n`);
+        process.stdout.write(`No database is registered — set ${DB_ENV.DRIVER} and ${DB_ENV.URL} (or ${DB_ENV.HOST} / ${DB_ENV.NAME} / ${DB_ENV.USER}), or run: npx -y @akms/mcp@latest db\n`);
         return 1;
     }
 

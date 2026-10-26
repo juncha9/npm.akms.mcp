@@ -389,7 +389,7 @@ export async function runTargetConfigCommand(options: ConfigCommandOptions): Pro
                 }
                 items.push({ value: "switch", key: "t", label: "Switch client", hint: switchHint });
             }
-            if(options.management) { options.management.decorate(items); items.push(...options.management.items()); }
+            if(options.management) options.management.decorate(items);
             items.push({ value: "quit", key: "q", label: "Quit" });
 
             let question = "No SSH hosts here yet";

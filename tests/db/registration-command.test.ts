@@ -35,45 +35,52 @@ async function run(values: ReturnType<typeof fixture>, lines: string[], mode: "c
     return text;
 }
 describe("standalone db registration", () => {
-    it("separates Sync, comparison and result pages from the database menu", async () => {
+    it("points the database menu to Sync, and Sync keeps comparison and result pages apart", async () => {
         const values = fixture();
         values.registry.register(["cursor", "claude-desktop"]);
         const entry = { command: "npx", args: ["-y", "@akms/mcp-db"], env: { DB_HOST: "example.local", DB_DESCRIPTION: "Shared description" } };
         values.registry.write("db", "app-db", entry);
         values.targets[1].writeEntry("app-db", { ...entry, env: { ...entry.env, DB_DESCRIPTION: "Client description" } });
-        const input = Object.assign(new PassThrough(), { isTTY: true, setRawMode: () => {} });
-        const output = Object.assign(new PassThrough(), { isTTY: true, columns: 120 });
-        let text = "";
-        output.on("data", (chunk) => { text += chunk; });
-        const page = () => text.split("\u001b[2J\u001b[H").at(-1)!.replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "");
-        const press = async (...keys: string[]) => {
-            for(const key of keys) { input.write(key); await new Promise<void>((resolve) => setImmediate(resolve)); }
+        const terminal = () => {
+            const input = Object.assign(new PassThrough(), { isTTY: true, setRawMode: () => {} });
+            const output = Object.assign(new PassThrough(), { isTTY: true, columns: 120 });
+            let text = "";
+            output.on("data", (chunk) => { text += chunk; });
+            const page = () => text.split("\u001b[2J\u001b[H").at(-1)!.replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "");
+            const press = async (...keys: string[]) => {
+                for(const key of keys) { input.write(key); await new Promise<void>((resolve) => setImmediate(resolve)); }
+            };
+            return { input, output, page, press };
         };
-        const running = runConfigCommand({ input, output, targets: values.targets, registryPath: values.registryPath, runtimeOptions: values.runtimeOptions });
+        // The database menu lists connections only; Sync is in the AKMS MCP menu.
+        const menu = terminal();
+        const config = runConfigCommand({ input: menu.input, output: menu.output, targets: values.targets, registryPath: values.registryPath, runtimeOptions: values.runtimeOptions });
         await new Promise<void>((resolve) => setImmediate(resolve));
-        expect(page()).toContain("Needs attention: 1 connection(s)");
-        await press("4", "\r");
-        expect(page()).toContain("Sync results");
-        expect(page()).not.toContain("Database connections");
-        await press("\r");
-        expect(page()).toContain("Shared description");
-        expect(page()).toContain("Client description");
-        expect(page()).not.toContain("Sync results");
-        await press("\u001b", "\u001b");
-        expect(page()).toContain("Database connections");
-        expect(page()).not.toContain("Client description");
-        expect(page()).toContain("Needs attention: 1 connection(s)");
-        await press("4", "\r", "\r", "\r", "y", "\r");
-        expect(page()).toContain("Sync results");
-        expect(page()).toContain("1 updated");
-        expect(page()).toContain("Press Enter to continue");
-        expect(page()).not.toContain("Database connections");
-        await press("\r");
-        expect(page()).toContain("Database connections");
-        expect(page()).not.toContain("Sync results");
-        expect(page()).not.toContain("Needs attention:");
-        await press("\u001b");
-        await running;
+        expect(menu.page()).toContain("Needs attention: 1 connection(s). Open Sync in the AKMS MCP menu.");
+        expect(menu.page()).not.toContain("review differences and retry");
+        await menu.press("\u001b");
+        await config;
+        // `akms-mcp-db sync` opens the same Sync screen as the menu.
+        const review = terminal();
+        const firstSync = runConfigCommand({ input: review.input, output: review.output, targets: values.targets, registryPath: values.registryPath, runtimeOptions: values.runtimeOptions, mode: "sync" });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(review.page()).toContain("Sync results");
+        expect(review.page()).not.toContain("Database connections");
+        await review.press("\r");
+        expect(review.page()).toContain("Shared description");
+        expect(review.page()).toContain("Client description");
+        expect(review.page()).not.toContain("Sync results");
+        await review.press("\u001b", "\u001b");
+        await firstSync;
+        const apply = terminal();
+        const secondSync = runConfigCommand({ input: apply.input, output: apply.output, targets: values.targets, registryPath: values.registryPath, runtimeOptions: values.runtimeOptions, mode: "sync" });
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        await apply.press("\r", "\r", "y", "\r");
+        expect(apply.page()).toContain("Sync results");
+        expect(apply.page()).toContain("1 updated");
+        expect(apply.page()).toContain("Press Enter to continue");
+        await apply.press("\r", "\u001b");
+        await secondSync;
         expect(values.targets[0].readEntries()).toEqual(values.targets[1].readEntries());
     });
 
@@ -128,22 +135,24 @@ describe("standalone db registration", () => {
         const existing = { command: "npx", args: ["-y", "@akms/mcp-db"], env: {} };
         for(const target of values.targets) target.writeEntry("legacy-connection", existing);
         const originals = values.targets.map((target) => fs.readFileSync(target.location, "utf8"));
-        const text = await run(values, ["register", "cursor", "claude-desktop", "a", "y", "q"]);
+        // Register lives in the AKMS MCP menu; `akms-mcp-db register` opens the same screen.
+        const registered = await run(values, ["cursor", "claude-desktop", "a", "y"], "register");
+        const text = registered + await run(values, ["q"]);
         expect(Object.keys(values.registry.target("db").readEntries())).toEqual(["legacy-connection"]);
         expect(text).toContain("Imported 1 existing connection(s)");
         expect(text).toContain("legacy-connection");
         expect(text).not.toContain("Switch client");
         values.targets.forEach((target, index) => expect(fs.readFileSync(target.location, "utf8")).toBe(originals[index]));
     });
-    it("shows all menus and blocks Add until a service is registered", async () => {
+    it("points to the AKMS MCP menu for shared settings and blocks Add until a service is registered", async () => {
         const values = fixture({ legacy: false });
         const existing = { command: "npx", args: ["-y", "@akms/mcp-db"], env: {} };
         values.targets[0].writeEntry("legacy-connection", existing);
         const before = fs.readFileSync(values.targets[0].location, "utf8");
         const text = await run(values, ["a", "q"]);
-        expect(text).toContain("Register");
-        expect(text).toContain("Sync");
-        expect(text).toContain("Import existing connections");
+        expect(text).toContain("Register, Sync and Runtime are in the AKMS MCP menu");
+        expect(text).toContain("Choose Register in the AKMS MCP menu");
+        expect(text).not.toContain("Import existing connections");
         expect(text).toContain("Register an AI service first");
         expect(text).not.toContain("Apply this registration?");
         expect(text).not.toContain("Save locally");

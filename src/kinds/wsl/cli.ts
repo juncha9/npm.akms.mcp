@@ -71,11 +71,12 @@ const HELP_TEXT = [
     `${SERVER_NAME} ${SERVER_VERSION} — MCP server for command execution and file transfer in a WSL distro (via wsl.exe)`,
     "",
     "Usage:",
-    "  akms-mcp-wsl [--check]",
-    "  akms-mcp-wsl --catalog           Load WSL connections from the shared registry",
-    "  akms-mcp-wsl config [--target <client>]",
-    "  akms-mcp-wsl register          Register AI services for all AKMS connections",
-    "  akms-mcp-wsl sync              Review differences and retry pending changes",
+    "  node wsl.js [--check]",
+    "  node wsl.js --catalog            Load WSL connections from the shared registry",
+    "  node wsl.js config [--target <client>]",
+    "  node wsl.js register           Register AI services for all AKMS connections",
+    "  node wsl.js sync               Review differences and retry pending changes",
+    "  (lib/wsl.js of the installed @akms/mcp; the AKMS MCP menu: npx -y @akms/mcp@latest)",
     "",
     "Commands:",
     "  config               Manage the WSL distros in the shared AKMS catalog —",
@@ -117,7 +118,7 @@ const HELP_TEXT = [
  */
 async function runCheckCommand(profile: WslHostProfile | null): Promise<number> {
     if (profile == null) {
-        process.stdout.write(`No WSL distro is registered — set ${SINGLE_HOST_ENV.DISTRO} (and optionally ${SINGLE_HOST_ENV.USER}), or run: akms-mcp-wsl config\n`);
+        process.stdout.write(`No WSL distro is registered — set ${SINGLE_HOST_ENV.DISTRO} (and optionally ${SINGLE_HOST_ENV.USER}), or run: npx -y @akms/mcp@latest wsl\n`);
         return 1;
     }
 
@@ -133,7 +134,7 @@ async function main(): Promise<void> {
     const _logger = $logger.child({ context: "cli" });
 
     if (process.argv[2] === "setup") {
-        process.stderr.write("The setup command has been removed. Use akms-mcp-wsl config.\n");
+        process.stderr.write("The setup command has been removed. Use npx -y @akms/mcp@latest wsl.\n");
         process.exitCode = 1;
         return;
     }

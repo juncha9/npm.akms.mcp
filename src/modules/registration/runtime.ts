@@ -8,8 +8,19 @@ import type { McpKind, McpServerEntry } from "./types";
 
 export interface LaunchCommand { command: string; args: string[] }
 export interface GlobalRuntime extends LaunchCommand { version: string; linked: boolean }
-export const packageName = (kind: McpKind) => `@akms/mcp-${kind}`;
+/** A separate per-kind package left in the runtime directory by 0.3.x or earlier. */
+export interface LegacyRuntime { kind: McpKind; packageName: string; version: string; linked: boolean }
+
+/** One package carries the menu and every kind's server since 0.4.0. */
+export const PACKAGE_NAME = "@akms/mcp";
+/** The separate per-kind packages of 0.3.x and earlier; their entries are still recognized so they can be migrated. */
+export const legacyPackageName = (kind: McpKind) => `@akms/mcp-${kind}`;
 const binary = (command: string) => command.replace(/\\/g, "/").split("/").pop()!.toLowerCase();
+const posixPath = (value: string | undefined) => value?.replace(/\\/g, "/") ?? "";
+const isNode = (command: string) => /^(node|nodejs)(\.exe)?$/.test(binary(command));
+const isCurrentScript = (script: string | undefined, kind: McpKind) => posixPath(script).endsWith(`/node_modules/@akms/mcp/lib/${kind}.js`);
+const isLegacyScript = (script: string | undefined, kind: McpKind) => posixPath(script).endsWith(`/node_modules/@akms/mcp-${kind}/lib/cli.js`);
+const isLegacyPackageArgument = (argument: string, kind: McpKind) => new RegExp(`^@akms/mcp-${kind}(?:@[^\\s]+)?$`).test(argument);
 
 export function runtimePrefix(): string {
     return path.join(process.env.AKMS_MCP_HOME ? path.resolve(process.env.AKMS_MCP_HOME) : path.join(os.homedir(), ".akms", "mcp"), "runtime");
@@ -19,12 +30,12 @@ export function runtimeRoot(prefix = runtimePrefix(), platform = process.platfor
     return path.join(prefix, ...(platform === "win32" ? [] : ["lib"]), "node_modules");
 }
 
-export const runtimeInstallCommand = (kind: McpKind) => `npm install --global --prefix "${runtimePrefix()}" ${packageName(kind)}@latest`;
+export const runtimeInstallCommand = () => `npm install --global --prefix "${runtimePrefix()}" ${PACKAGE_NAME}@latest`;
 
-/** Called only from Updates, never during menu/server startup. */
-export async function latestRuntimeVersion(kind: McpKind, timeoutMs = 6000): Promise<string | null> {
+/** Called only from Runtime's "Check for updates", never during menu/server startup. */
+export async function latestRuntimeVersion(timeoutMs = 6000): Promise<string | null> {
     try {
-        const { stdout } = await promisify(execFile)(process.execPath, [npmCli(), "view", `${packageName(kind)}@latest`, "version", "--json", "--prefer-online", "--fetch-retries=0", "--fetch-timeout=4000"], {
+        const { stdout } = await promisify(execFile)(process.execPath, [npmCli(), "view", `${PACKAGE_NAME}@latest`, "version", "--json", "--prefer-online", "--fetch-retries=0", "--fetch-timeout=4000"], {
             windowsHide: true, timeout: timeoutMs, maxBuffer: 65_536,
         });
         const version: unknown = JSON.parse(stdout);
@@ -57,9 +68,8 @@ export function runtimeIsOlder(installed: string, current: string): boolean {
 export function launchKind(entry: McpServerEntry): McpKind | null {
     for(const kind of KINDS) {
         if(new RegExp(`^akms-mcp-${kind}(?:\\.cmd|\\.exe)?$`).test(binary(entry.command))
-            || entry.args.some((arg) => new RegExp(`^@akms/mcp-${kind}(?:@[^\\s]+)?$`).test(arg))) return kind;
-        if(/^(node|nodejs)(\.exe)?$/.test(binary(entry.command))
-            && entry.args[0]?.replace(/\\/g, "/").endsWith(`/node_modules/@akms/mcp-${kind}/lib/cli.js`)) return kind;
+            || entry.args.some((arg) => isLegacyPackageArgument(arg, kind))) return kind;
+        if(isNode(entry.command) && (isCurrentScript(entry.args[0], kind) || isLegacyScript(entry.args[0], kind))) return kind;
     }
     return null;
 }
@@ -68,21 +78,28 @@ export function launchKind(entry: McpServerEntry): McpKind | null {
 export function standardLaunch(entry: McpServerEntry, kind: McpKind): boolean {
     if(launchKind(entry) !== kind) return false;
     const command = binary(entry.command);
-    if(/^(node|nodejs)(\.exe)?$/.test(command)) return entry.args.length === 1
-        && entry.args[0].replace(/\\/g, "/").endsWith(`/node_modules/@akms/mcp-${kind}/lib/cli.js`);
+    if(isNode(entry.command)) return entry.args.length === 1 && (isCurrentScript(entry.args[0], kind) || isLegacyScript(entry.args[0], kind));
     if(new RegExp(`^akms-mcp-${kind}(?:\\.cmd|\\.exe)?$`).test(command)) return entry.args.length === 0;
     let args = entry.args;
     if(command === "cmd" || command === "cmd.exe") {
         if(args[0]?.toLowerCase() !== "/c" || !/^npx(?:\.cmd)?$/i.test(args[1] ?? "")) return false;
         args = args.slice(2);
     } else if(!/^npx(?:\.cmd)?$/.test(command)) return false;
-    return args.length === 2 && ["-y", "--yes"].includes(args[0])
-        && new RegExp(`^@akms/mcp-${kind}(?:@[^\\s]+)?$`).test(args[1]);
+    return args.length === 2 && ["-y", "--yes"].includes(args[0]) && isLegacyPackageArgument(args[1], kind);
 }
 
 export function catalogLaunch(entry: McpServerEntry, kind = launchKind(entry)): boolean {
     return !!kind && entry.args.length === 2 && entry.args[1] === "--catalog"
         && standardLaunch({ ...entry, args: entry.args.slice(0, 1) }, kind);
+}
+
+/** A standard launch of a separate per-kind package (npx or its runtime path) — what the 0.4 migration repoints. */
+export function legacyLaunch(entry: McpServerEntry, kind = launchKind(entry)): boolean {
+    if(!kind) return false;
+    const launch = catalogLaunch(entry, kind) ? { ...entry, args: entry.args.slice(0, 1) } : entry;
+    if(!standardLaunch(launch, kind)) return false;
+    if(isNode(launch.command)) return isLegacyScript(launch.args[0], kind);
+    return launch.args.some((arg) => isLegacyPackageArgument(arg, kind));
 }
 
 export function npmCli(): string {
@@ -107,25 +124,37 @@ export function npmCli(): string {
 
 export function findGlobalRuntime(kind: McpKind, root?: string): GlobalRuntime | null {
     try {
-        const directory = path.join(root ?? runtimeRoot(), "@akms", `mcp-${kind}`);
+        const directory = path.join(root ?? runtimeRoot(), "@akms", "mcp");
         const metadata = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf8"));
-        const bin = typeof metadata.bin === "string" ? metadata.bin : metadata.bin?.[`akms-mcp-${kind}`];
-        const script = path.join(directory, "lib", "cli.js");
-        if(metadata.name !== packageName(kind) || !["lib/cli.js", "./lib/cli.js"].includes(bin)
-            || typeof metadata.version !== "string" || !fs.statSync(script).isFile()) return null;
+        // Kinds have no bin of their own: a 0.3.x package in the same prefix still owns akms-mcp-<kind>.
+        const script = path.join(directory, "lib", `${kind}.js`);
+        if(metadata.name !== PACKAGE_NAME || typeof metadata.version !== "string" || !fs.statSync(script).isFile()) return null;
         // Preserve the Node alias and package link; the runtime prefix is independent of Node versions.
         return { command: process.execPath, args: [script], version: metadata.version, linked: fs.lstatSync(directory).isSymbolicLink() };
     } catch { return null; }
 }
 
-/** Management-only. No npm process is started by a configured MCP server. */
-export async function installGlobalRuntime(kind: McpKind): Promise<void> {
+/** Per-kind packages still present in the runtime directory. */
+export function findLegacyRuntimes(root?: string): LegacyRuntime[] {
+    const found: LegacyRuntime[] = [];
+    for(const kind of KINDS) {
+        try {
+            const directory = path.join(root ?? runtimeRoot(), "@akms", `mcp-${kind}`);
+            const metadata = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf8"));
+            if(metadata.name !== legacyPackageName(kind)) continue;
+            found.push({ kind, packageName: legacyPackageName(kind), version: typeof metadata.version === "string" ? metadata.version : "unknown", linked: fs.lstatSync(directory).isSymbolicLink() });
+        } catch { /* Not installed. */ }
+    }
+    return found;
+}
+
+async function runNpm(argumentsList: string[], failure: string, retry: string): Promise<void> {
     const cancellation = new AbortController();
     const cancel = () => cancellation.abort();
     process.on("SIGINT", cancel);
     process.on("SIGTERM", cancel);
     try {
-        await promisify(execFile)(process.execPath, [npmCli(), "install", "--global", "--prefix", runtimePrefix(), "--prefer-online", "--no-fund", "--no-audit", `${packageName(kind)}@latest`], {
+        await promisify(execFile)(process.execPath, [npmCli(), ...argumentsList], {
             windowsHide: true, timeout: 180000, maxBuffer: 1024 * 1024, signal: cancellation.signal, cwd: os.homedir(),
         });
     } catch(error) {
@@ -133,11 +162,25 @@ export async function installGlobalRuntime(kind: McpKind): Promise<void> {
         const stderr = (error as { stderr?: unknown }).stderr;
         const detail = stripVTControlCharacters(typeof stderr === "string" ? stderr : error instanceof Error ? error.message : "")
             .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "").trim().split(/\r?\n/).slice(-6).map((line) => line.slice(0, 500)).join("\n");
-        throw new Error(`AKMS runtime installation failed. Run ${runtimeInstallCommand(kind)} in your terminal and retry.${detail ? `\n\n${detail}` : ""}`);
+        throw new Error(`${failure} Run ${retry} in your terminal and retry.${detail ? `\n\n${detail}` : ""}`);
     } finally {
         process.off("SIGINT", cancel);
         process.off("SIGTERM", cancel);
     }
+}
+
+/** Management-only. No npm process is started by a configured MCP server. */
+export async function installGlobalRuntime(): Promise<void> {
+    await runNpm(["install", "--global", "--prefix", runtimePrefix(), "--prefer-online", "--no-fund", "--no-audit", `${PACKAGE_NAME}@latest`],
+        "AKMS runtime installation failed.", runtimeInstallCommand());
+}
+
+/** Removes per-kind packages; a linked one loses only its link, never the checkout it points to. */
+export async function removeLegacyRuntimes(kinds: McpKind[]): Promise<void> {
+    if(!kinds.length) return;
+    const names = kinds.map(legacyPackageName);
+    await runNpm(["uninstall", "--global", "--prefix", runtimePrefix(), "--no-fund", "--no-audit", ...names],
+        "Removing the old packages failed.", `npm uninstall --global --prefix "${runtimePrefix()}" ${names.join(" ")}`);
 }
 
 /** Forms use an installed runtime; the bare command is only a not-yet-installed draft. */

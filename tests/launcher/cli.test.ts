@@ -18,11 +18,13 @@ async function runCli(options: { argumentsList: string[]; input?: string; enviro
     temporaryDirectories.push(directory);
     const record = join(directory, "calls.jsonl");
     const runtimeRecord = join(directory, "runtime-calls.jsonl");
-    for(const id of options.installed ?? ["db", "ssh", "wsl", "s3"]) {
-        const root = join(directory, "runtime", ...(process.platform === "win32" ? [] : ["lib"]), "node_modules", "@akms", `mcp-${id}`);
+    // One installed @akms/mcp carries the entries of the listed kinds.
+    const kinds = options.installed ?? ["db", "ssh", "wsl", "s3"];
+    if(kinds.length > 0) {
+        const root = join(directory, "runtime", ...(process.platform === "win32" ? [] : ["lib"]), "node_modules", "@akms", "mcp");
         await mkdir(join(root, "lib"), { recursive: true });
-        await writeFile(join(root, "package.json"), JSON.stringify({ name: `@akms/mcp-${id}`, version: "1.2.3", type: "module", bin: { [`akms-mcp-${id}`]: "lib/cli.js" } }));
-        await writeFile(join(root, "lib/cli.js"), await readFile(new URL("./fixtures/runtime-cli.js", import.meta.url)));
+        await writeFile(join(root, "package.json"), JSON.stringify({ name: "@akms/mcp", version: "1.2.3", type: "module", bin: Object.fromEntries(kinds.map((kind) => [`akms-mcp-${kind}`, `lib/${kind}.js`])) }));
+        for(const kind of kinds) await writeFile(join(root, "lib", `${kind}.js`), await readFile(new URL("./fixtures/runtime-cli.js", import.meta.url)));
     }
     const environment = { ...process.env };
     for(const key of Object.keys(environment)) {
@@ -86,7 +88,7 @@ describe("built CLI process boundary", () => {
         expect(result.code).toBe(0);
         expect(result.calls).toEqual([]);
         expect(result.runtimeCalls).toEqual([["config", "--target", "codex"]]);
-        expect(result.output).toContain(`Opening @akms/mcp-${id} 1.2.3`);
+        expect(result.output).toContain(`setup · @akms/mcp 1.2.3`);
         expect(result.output).toContain('CHILD_INPUT:"quit\\n"');
     }, 20_000);
 
@@ -109,15 +111,6 @@ describe("built CLI process boundary", () => {
         expect(result.output).toContain('CHILD_INPUT:"quit\\n"');
     }, 20_000);
 
-    it("never launches after a failed latest check", async () => {
-        const result = await runCli({ argumentsList: ["db"], installed: [], input: "y\ny\n", environment: { AKMS_TEST_FAIL_INSTALL: "1", AKMS_TEST_FAIL_LOOKUP: "1" } });
-        expect(result.code).toBe(1);
-        expect(result.calls).toHaveLength(2);
-        expect(result.calls.map((call) => call[0])).toEqual(["install", "view"]);
-        expect(result.runtimeCalls).toEqual([]);
-        expect(result.output).toContain("setup was not started");
-    }, 20_000);
-
     it("propagates a setup failure in direct mode", async () => {
         const result = await runCli({ argumentsList: ["ssh"], environment: { AKMS_TEST_EXIT_CODE: "7" } });
         expect(result.code, JSON.stringify(result)).toBe(7);
@@ -127,10 +120,10 @@ describe("built CLI process boundary", () => {
         const result = await runCli({ argumentsList: ["db", "--target", "cursor"], installed: [], input: "\nquit\n" });
         expect(result.code, result.output).toBe(0);
         expect(result.calls.map((call) => call[0])).toEqual(["install"]);
-        expect(result.calls[0]).toContain("@akms/mcp-db@latest");
+        expect(result.calls[0]).toContain("@akms/mcp@latest");
         expect(result.runtimeCalls).toEqual([["config", "--target", "cursor"]]);
         expect(result.output).toContain('CHILD_INPUT:"quit\\n"');
-        expect(result.output).toContain("Opening @akms/mcp-db 9.8.7");
+        expect(result.output).toContain("Opening Database setup · @akms/mcp 9.8.7");
     }, 20_000);
 
     it("preserves menu read-ahead through installation and child handoff", async () => {
@@ -140,25 +133,23 @@ describe("built CLI process boundary", () => {
         expect(result.output).toContain('CHILD_INPUT:"quit\\n"');
     }, 20_000);
 
-    it("does not open npm exec when installation fails and the fallback answer is blank", async () => {
+    it("does not open any setup when installation fails and the fallback answer is blank", async () => {
         const result = await runCli({ argumentsList: ["ssh"], installed: [], input: "y\n\n", environment: { AKMS_TEST_FAIL_INSTALL: "1" } });
         expect(result.code).toBe(1);
         expect(result.calls.map((call) => call[0])).toEqual(["install"]);
         expect(result.output).toContain("registry denied installation");
-        expect(result.output).toContain("npm exec instead? (y/N)");
+        expect(result.output).toContain("Open setup from this launcher instead? (y/N)");
         expect(result.runtimeCalls).toEqual([]);
     }, 20_000);
 
-    it("opens the exact freshly checked npm setup only after fallback approval", async () => {
-        const result = await runCli({ argumentsList: ["s3", "--target", "codex"], installed: [], input: "y\ny\nquit\n", environment: { AKMS_TEST_FAIL_INSTALL: "1" } });
+    it("opens the kind's setup from this launcher's own package after approval, without npm exec", async () => {
+        const result = await runCli({ argumentsList: ["s3", "--target", "codex"], installed: [], input: "y\ny\nq\n", environment: { AKMS_TEST_FAIL_INSTALL: "1" } });
         expect(result.code, result.output).toBe(0);
-        expect(result.calls.map((call) => call[0])).toEqual(["install", "view", "exec"]);
-        expect(result.calls[1].slice(0, 3)).toEqual(["view", "@akms/mcp-s3@latest", "version"]);
-        expect(result.calls[2]).toContain("--package=@akms/mcp-s3@9.8.7");
-        expect(result.calls[2].slice(-5)).toEqual(["--", "akms-mcp-s3", "config", "--target", "codex"]);
-        expect(result.output).toContain('CHILD_INPUT:"quit\\n"');
-        const cacheIndex = result.calls[1].indexOf("--cache");
-        expect(existsSync(result.calls[1][cacheIndex + 1])).toBe(false);
+        expect(result.calls.map((call) => call[0])).toEqual(["install"]);
+        expect(result.output).toContain("Opening S3 setup · @akms/mcp");
+        expect(result.output).toContain("from this launcher");
+        expect(result.output).toContain("S3 connections");
+        expect(result.runtimeCalls).toEqual([]);
     }, 20_000);
 
     it("leaves cleanly when installation is declined", async () => {

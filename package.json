@@ -27,11 +27,7 @@
     },
     "type": "module",
     "bin": {
-        "akms-mcp": "lib/cli.js",
-        "akms-mcp-db": "lib/db.js",
-        "akms-mcp-ssh": "lib/ssh.js",
-        "akms-mcp-wsl": "lib/wsl.js",
-        "akms-mcp-s3": "lib/s3.js"
+        "akms-mcp": "lib/cli.js"
     },
     "files": [
         "lib",

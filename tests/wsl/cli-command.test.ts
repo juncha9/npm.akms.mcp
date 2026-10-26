@@ -55,7 +55,7 @@ describe("CLI configuration command", () => {
         const result = runCli(["--help"]);
         expect(result.error).toBeUndefined();
         expect(result.status).toBe(0);
-        expect(result.stderr).toContain("akms-mcp-wsl config [--target <client>]");
+        expect(result.stderr).toContain("node wsl.js config [--target <client>]");
         expect(result.stderr).not.toContain("setup");
     }, 15_000);
 
@@ -73,7 +73,7 @@ describe("CLI configuration command", () => {
         expect(result.error).toBeUndefined();
         expect(result.status).toBe(1);
         expect(result.stdout).toBe("");
-        expect(result.stderr).toContain("The setup command has been removed. Use akms-mcp-wsl config.");
+        expect(result.stderr).toContain("The setup command has been removed. Use npx -y @akms/mcp@latest wsl.");
         expect(fs.readFileSync(configPath, "utf8")).toBe(CONFIG_TEXT);
     }, 15_000);
 
@@ -81,7 +81,7 @@ describe("CLI configuration command", () => {
         const result = runCli(["--check"]);
         expect(result.error).toBeUndefined();
         expect(result.status).toBe(1);
-        expect(result.stdout).toContain("or run: akms-mcp-wsl config");
+        expect(result.stdout).toContain("or run: npx -y @akms/mcp@latest wsl");
         expect(result.stdout).not.toContain("setup");
     }, 15_000);
 });

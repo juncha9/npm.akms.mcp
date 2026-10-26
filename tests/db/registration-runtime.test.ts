@@ -8,7 +8,8 @@ import { Registry, entryKind } from "@/modules/registration/registry";
 import { findGlobalRuntime, installGlobalRuntime, standardLaunch, runtimePrefix, runtimeRoot, runtimeIsOlder, npmCli } from "@/modules/registration/runtime";
 import type { GlobalRuntime } from "@/modules/registration/runtime";
 import { prepareRuntime, runtimeMenu } from "@/modules/registration/runtime-menu";
-import { Prompter } from "@db/modules/manage/prompter";
+// Runtime screens open from the AKMS MCP menu, which draws them with the shared prompter.
+import { Prompter } from "@/modules/registration/prompter";
 import { createJsonFileTarget } from "@db/modules/manage/targets/json-file";
 
 let directory: string;
@@ -22,10 +23,10 @@ afterEach(async () => {
 const legacy = () => ({ command: "cmd", args: ["/c", "npx", "-y", "@akms/mcp-db@0.2.1"], env: { DB_HOST: "db.local", DB_PASSWORD: "test-secret", CUSTOM: "keep" } });
 function fixture() {
     const root = path.join(directory, "node_modules");
-    const folder = path.join(root, "@akms", "mcp-db");
+    const folder = path.join(root, "@akms", "mcp");
     fs.mkdirSync(path.join(folder, "lib"), { recursive: true });
-    fs.writeFileSync(path.join(folder, "package.json"), JSON.stringify({ name: "@akms/mcp-db", version: "1.2.3", bin: { "akms-mcp-db": "lib/cli.js" } }));
-    fs.writeFileSync(path.join(folder, "lib", "cli.js"), "process.stdin.resume();");
+    fs.writeFileSync(path.join(folder, "package.json"), JSON.stringify({ name: "@akms/mcp", version: "1.2.3", bin: { "akms-mcp": "lib/cli.js", "akms-mcp-db": "lib/db.js" } }));
+    fs.writeFileSync(path.join(folder, "lib", "db.js"), "process.stdin.resume();");
     const targets = ["cursor", "claude-desktop"].map((id) => createJsonFileTarget({ id: id as "cursor" | "claude-desktop", label: id, filePath: path.join(directory, id + ".json") }));
     const runtime = findGlobalRuntime("db", root)!;
     const registry = new Registry(targets, path.join(directory, "registry.json"), { find: () => runtime, check: vi.fn(async () => ({ ok: true, server: "fixture", version: "1.2.3", tools: 1, exitCode: 0, stderr: [] })) });
@@ -43,8 +44,11 @@ describe("globally installed direct runtime", () => {
     it("discovers a validated global package and recognizes its saved path after removal", () => {
         const { root, folder, runtime } = fixture();
         expect(runtime.command).toBe(process.execPath);
-        expect(runtime.args).toEqual([path.join(folder, "lib", "cli.js")]);
+        expect(runtime.args).toEqual([path.join(folder, "lib", "db.js")]);
         expect(entryKind({ ...runtime, env: {} })).toBe("db");
+        // One package: a kind whose entry file is missing is not installed.
+        expect(findGlobalRuntime("ssh", root)).toBeNull();
+        expect(entryKind({ command: process.execPath, args: [path.join(root, "@akms", "mcp-db", "lib", "cli.js")], env: {} })).toBe("db");
         fs.unlinkSync(runtime.args[0]);
         expect(findGlobalRuntime("db", root)).toBeNull();
         expect(entryKind({ ...runtime, env: {} })).toBe("db");
@@ -57,8 +61,10 @@ describe("globally installed direct runtime", () => {
         registry.write("db", "second", legacy());
         const custom = { ...legacy(), args: [...legacy().args, "--custom-argument"] };
         registry.write("db", "custom", custom);
-        const text = await screen(["apply", "y", "b"], (prompter) => runtimeMenu(prompter, registry, "db"));
-        expect(text).toContain("Convert 2 connection(s)");
+        const text = await screen(["layout", "db", "relaunch", "y", "b", "b"], (prompter) => runtimeMenu(prompter, registry));
+        expect(text).toContain("launch out of date");
+        expect(text).toContain("Update launch commands");
+        expect(text).toContain("first, second");
         expect(registry.runtimeOptions.check).toHaveBeenCalledTimes(1);
         expect(text).toContain("OK first: fixture@1.2.3");
         expect(text).toContain("OK second:");
@@ -115,7 +121,7 @@ describe("globally installed direct runtime", () => {
         const { targets, runtime } = fixture();
         const install = vi.fn();
         const registry = new Registry(targets, path.join(directory, "other.json"), { find: () => ({ ...runtime, linked: true }), install });
-        await expect(registry.installRuntime("db")).rejects.toThrow(/linked development/);
+        await expect(registry.installRuntime()).rejects.toThrow(/linked development/);
         expect(install).not.toHaveBeenCalled();
     });
 
@@ -130,19 +136,19 @@ describe("globally installed direct runtime", () => {
         fs.writeFileSync(path.join(directory, "package.json"), JSON.stringify({ type: "commonjs" }));
         fs.writeFileSync(npm, `require('node:fs').writeFileSync(${JSON.stringify(record)}, JSON.stringify(process.argv.slice(2)));`);
         vi.stubEnv("npm_execpath", npm);
-        await installGlobalRuntime("db");
-        expect(JSON.parse(fs.readFileSync(record, "utf8"))).toEqual(["install", "--global", "--prefix", path.join(directory, "runtime"), "--prefer-online", "--no-fund", "--no-audit", "@akms/mcp-db@latest"]);
+        await installGlobalRuntime();
+        expect(JSON.parse(fs.readFileSync(record, "utf8"))).toEqual(["install", "--global", "--prefix", path.join(directory, "runtime"), "--prefer-online", "--no-fund", "--no-audit", "@akms/mcp@latest"]);
     });
 
     it("finds a linked dedicated runtime without npm and preserves Node's version-switching alias", () => {
         const { folder } = fixture();
-        const alias = path.join(runtimeRoot(), "@akms", "mcp-db");
+        const alias = path.join(runtimeRoot(), "@akms", "mcp");
         fs.mkdirSync(path.dirname(alias), { recursive: true });
         fs.symlinkSync(folder, alias, process.platform === "win32" ? "junction" : "dir");
         const nodeAlias = path.join(directory, "node-switch", "node.exe");
         vi.stubGlobal("process", { ...process, execPath: nodeAlias, env: { AKMS_MCP_HOME: directory, PATH: "" } });
         expect(runtimePrefix()).toBe(path.join(directory, "runtime"));
-        expect(findGlobalRuntime("db")).toEqual({ command: nodeAlias, args: [path.join(alias, "lib", "cli.js")], version: "1.2.3", linked: true });
+        expect(findGlobalRuntime("db")).toEqual({ command: nodeAlias, args: [path.join(alias, "lib", "db.js")], version: "1.2.3", linked: true });
         expect(runtimeRoot(runtimePrefix(), "linux")).toBe(path.join(directory, "runtime", "lib", "node_modules"));
         expect(runtimeRoot(runtimePrefix(), "win32")).toBe(path.join(directory, "runtime", "node_modules"));
         // The old Node-version-specific path remains eligible for migration.
@@ -177,9 +183,10 @@ describe("globally installed direct runtime", () => {
         const registry = new Registry(targets, path.join(directory, "linked.json"), { find: () => ({ ...runtime, version: "0.0.1", linked: true }), install });
         const text = await screen(["b"], async (prompter) => {
             expect(await prepareRuntime(prompter, registry, "db", "0.2.1")).toBe(true);
-            await runtimeMenu(prompter, registry, "db");
+            await runtimeMenu(prompter, registry);
         });
-        expect(text).toContain("linked development checkout");
+        expect(text).toContain("development link");
+        expect(text).not.toContain("Check for updates");
         expect(text).not.toContain("Update");
         expect(install).not.toHaveBeenCalled();
     });
@@ -205,7 +212,7 @@ describe("globally installed direct runtime", () => {
         fs.writeFileSync(npm, `process.stderr.write('discard-one\\ndiscard-two\\n3\\n4\\n5\\n6\\n\\x1b[31mEACCES permission denied\\x1b[0m\\n8\\n'); process.exit(1);`);
         vi.stubEnv("npm_execpath", npm);
         let error: unknown;
-        try { await installGlobalRuntime("db"); } catch(value) { error = value; }
+        try { await installGlobalRuntime(); } catch(value) { error = value; }
         expect(String(error)).toContain("EACCES permission denied");
         expect(String(error)).toContain("--prefix");
         expect(String(error)).not.toContain("discard");

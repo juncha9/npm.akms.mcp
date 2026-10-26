@@ -1,9 +1,9 @@
-import { runtimeMenu } from "../registration/runtime-menu";
+import { runtimeMenu, runtimeNotice } from "../registration/runtime-menu";
 import type { Readable, Writable } from "node:stream";
 import type { ClientId, LaunchOptions, McpId } from "../../_types";
 import { Prompter, PromptBackError, PromptClosedError } from "./prompter";
 import { Registry } from "../registration/registry";
-import { registrationMenu, syncMenu, updatesMenu } from "../registration/menu";
+import { registrationMenu, syncMenu } from "../registration/menu";
 import { listConfigTargets } from "../registration/targets";
 import { CLIENT_LABELS } from "../registration/types";
 import { migrationMenu } from "../registration/migration-menu";
@@ -50,8 +50,9 @@ export async function runMenu(options: MenuOptions): Promise<number> {
                 const state = registry.read();
                 const clients = state.clients;
                 const migration = registry.needsMigration(state);
-                if(migration) prompter.write(prompter.paint.warning("Registry update available. Choose Migrate registry to review the changes.\n"));
-                const picked: McpId | "register" | "sync" | "runtime" | "updates" | "migrate" | "quit" = await prompter.select<McpId | "register" | "sync" | "runtime" | "updates" | "migrate" | "quit">("AKMS MCP · Connection setup", [
+                if(migration) prompter.write(prompter.paint.warning("! Registry update available. Choose Migrate registry to review the changes.\n"));
+                const runtime = runtimeNotice(registry);
+                const picked: McpId | "register" | "sync" | "runtime" | "migrate" | "quit" = await prompter.select<McpId | "register" | "sync" | "runtime" | "migrate" | "quit">("AKMS MCP · Connection setup", [
                     { value: "db", label: "Database", hint: "PostgreSQL connections" },
                     { value: "ssh", label: "SSH", hint: "Remote hosts" },
                     { value: "wsl", label: "WSL", hint: "Local Linux distros · Windows" },
@@ -59,16 +60,14 @@ export async function runMenu(options: MenuOptions): Promise<number> {
                     { separator: true },
                     { value: "register", label: "Register", hint: clients.length ? clients.map((id) => CLIENT_LABELS[id]).join(" · ") : "Choose AI services once" },
                     { value: "sync", label: "Sync", hint: "Review and retry shared settings" },
-                    { value: "runtime", label: "Runtime", hint: "AKMS installation / replace npx launches" },
-                    { value: "updates", label: "Updates", hint: "Check installed MCP releases" },
+                    { value: "runtime", label: "Runtime", hint: runtime.hint, notice: runtime.notice },
                     ...(migration ? [{ value: "migrate" as const, key: "migrate", label: "Migrate registry", hint: "Review older registry format and session layout" }] : []),
                     { value: "quit", label: "Quit" },
                 ], { defaultValue, cancelValue: "quit" });
-                if(picked !== "register" && picked !== "sync" && picked !== "runtime" && picked !== "updates" && picked !== "migrate") { selected = picked; break; }
+                if(picked !== "register" && picked !== "sync" && picked !== "runtime" && picked !== "migrate") { selected = picked; break; }
                 try {
                     if(picked === "register") await registrationMenu(prompter, registry, options.targetId);
                     else if(picked === "runtime") await runtimeMenu(prompter, registry);
-                    else if(picked === "updates") await updatesMenu(prompter, registry);
                     else if(picked === "migrate") await migrationMenu(prompter, registry);
                     else await syncMenu(prompter, registry);
                 } catch(error) {

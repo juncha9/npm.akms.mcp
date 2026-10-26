@@ -18,7 +18,10 @@ afterEach(async () => {
     vi.unstubAllEnvs();
     await removeTempDirectory(directory, "akms-migration-");
 }, 15_000);
-const entry = (kind: McpKind = "db"): McpServerEntry => ({ command: "npx", args: ["-y", `@akms/mcp-${kind}`], env: { [`${kind.toUpperCase()}_PASSWORD`]: "fixture-private-secret" } });
+// The bin form is a standard launch that is not tied to a per-kind package, so only the layout steps apply.
+const entry = (kind: McpKind = "db"): McpServerEntry => ({ command: `akms-mcp-${kind}`, args: [], env: { [`${kind.toUpperCase()}_PASSWORD`]: "fixture-private-secret" } });
+const legacyEntry = (kind: McpKind = "db"): McpServerEntry => ({ command: "npx", args: ["-y", `@akms/mcp-${kind}`], env: { [`${kind.toUpperCase()}_PASSWORD`]: "fixture-private-secret" } });
+const runtimeScript = (kind: McpKind) => path.join(directory, "runtime/node_modules/@akms/mcp/lib", `${kind}.js`);
 function fixture() {
     const targets: ConfigTarget[] = ["cursor", "codex"].map(id => {
         const file = path.join(directory, id + ".json");
@@ -30,7 +33,7 @@ function fixture() {
     const file = path.join(directory, "registry.json");
     fs.writeFileSync(file, JSON.stringify({ version: 1, clients: [], connections: {} }));
     const options: Registry["runtimeOptions"] = {
-        find: kind => ({ command: process.execPath, args: [path.join(directory, "runtime/node_modules/@akms", `mcp-${kind}`, "lib/cli.js")], version: "1.0.0", linked: false }),
+        find: kind => ({ command: process.execPath, args: [runtimeScript(kind)], version: "1.0.0", linked: false }),
         check: vi.fn(async () => ({ ok: true, server: "fixture", version: "1.0.0", tools: 3, toolNames: ["alpha__db_query", "beta__db_query", "db_catalog_status"], exitCode: 0, stderr: [] })),
     };
     const registry = new Registry(targets, file, options); registry.register(["cursor", "codex"]); registry.write("db", "alpha", entry()); registry.write("db", "beta", entry());
@@ -112,22 +115,22 @@ describe("ordered registry migration", () => {
     });
     it("shows the config notice and action only for an older format", async () => {
         const { registry, targets, options } = fixture(); const management = new ManagedSession({ kind: "db", targets, registryPath: registry.file, runtimeOptions: options });
-        expect(management.items().some(item => "value" in item && item.value === "migrate")).toBe(true);
-        expect(await screen([], prompt => { management.writeStatus(prompt); return Promise.resolve(); })).toContain("Registry update available");
+        const status = () => screen([], prompt => { management.writeStatus(prompt); return Promise.resolve(); });
+        expect(await status()).toContain("Registry update available. Choose Migrate registry in the AKMS MCP menu.");
         registry.applyMigration(registry.planMigration());
-        expect(management.items().some(item => "value" in item && item.value === "migrate")).toBe(false);
+        expect(await status()).not.toContain("Registry update available");
     });
     it("defaults the migration preview to No, then probes the approved session tools", async () => {
         const { registry, options, backup } = fixture(); const before = fs.readFileSync(registry.file, "utf8");
-        const declined = await screen([""], prompt => migrationMenu(prompt, registry)); expect(declined).toContain("Migrate registry and apply these changes? (y/N)");
+        const declined = await screen([""], prompt => migrationMenu(prompt, registry)); expect(declined).toContain("Migrate the registry and apply these changes? (y/N)");
         expect(fs.readFileSync(registry.file, "utf8")).toBe(before); expect(options.check).not.toHaveBeenCalled();
         const applied = await screen(["y"], prompt => migrationMenu(prompt, registry)); expect(applied).toContain("Registry migration saved"); expect(applied).toContain("OK akms_db"); expect(applied).not.toContain("fixture-private-secret");
         expect(options.check).toHaveBeenCalledTimes(1); expect(fs.readFileSync(backup, "utf8")).toBe(before);
     });
     it("turns the future-kind default off and on from Runtime while preserving existing modes", async () => {
         const { registry, targets } = fixture(); expect(() => registry.setDefaultMode("individual")).toThrow(/Migrate registry/); registry.applyMigration(registry.planMigration());
-        await screen(["default", "", "b"], prompt => runtimeMenu(prompt, registry, "db")); expect(registry.read().defaultMode).toBe("catalog");
-        await screen(["default", "y", "b"], prompt => runtimeMenu(prompt, registry, "db")); expect(registry.read().defaultMode).toBe("individual"); expect(registry.isSessionMode("db")).toBe(true);
+        await screen(["layout", "default", "", "b", "b"], prompt => runtimeMenu(prompt, registry)); expect(registry.read().defaultMode).toBe("catalog");
+        await screen(["layout", "default", "y", "b", "b"], prompt => runtimeMenu(prompt, registry)); expect(registry.read().defaultMode).toBe("individual"); expect(registry.isSessionMode("db")).toBe(true);
         registry.target("ssh").writeEntry("host", entry("ssh")); expect(targets[0].readEntries().host).toBeDefined();
         registry.setDefaultMode("catalog"); expect(registry.isSessionMode("ssh")).toBe(false); registry.target("s3").writeEntry("bucket", entry("s3")); expect(targets[0].readEntries().akms_s3).toBeDefined();
     });
@@ -138,5 +141,63 @@ describe("ordered registry migration", () => {
         expect(await screen([], prompt => migrationMenu(prompt, registry))).toContain("Resolve blocked kinds"); expect(fs.readFileSync(registry.file, "utf8")).toBe(before);
         delete state.connections["x".repeat(36)]; fs.writeFileSync(registry.file, JSON.stringify(state)); options.find = () => null;
         registry.applyMigration(registry.planMigration()); expect(() => registry.setDefaultMode("individual")).toThrow(/pending runtimes/); expect(registry.read().defaultMode).toBe("catalog");
+    });
+});
+
+describe("moving 0.3 launches to the single @akms/mcp package", () => {
+    const legacyScript = (kind: McpKind) => path.join(directory, "runtime/node_modules/@akms", `mcp-${kind}`, "lib/cli.js");
+    /** A 0.3.x catalog: akms_db applied from the per-kind package, plus one saved npx connection. */
+    function legacyFixture() {
+        const values = fixture();
+        const current = values.options.find!;
+        values.options.find = kind => ({ command: process.execPath, args: [legacyScript(kind)], version: "0.3.2", linked: false });
+        values.registry.applyMigration(values.registry.planMigration());
+        values.registry.write("db", "gamma", legacyEntry());
+        values.options.find = current;
+        clearWrites(values.targets);
+        return values;
+    }
+    it("offers one step, repoints the session and saved npx entries, and lets Sync rewrite the services", () => {
+        const { registry, targets } = legacyFixture();
+        expect(targets[0].readEntries().akms_db.args[0]).toBe(legacyScript("db"));
+        const plan = registry.planMigration();
+        expect(plan.steps.map(step => step.id)).toEqual(["single_package"]);
+        expect(plan.launches).toEqual([{ kind: "db", names: ["akms_db", "gamma"], ready: true }]);
+        expect(plan.kinds).toEqual([]);
+        registry.applyMigration(plan);
+        expect(registry.needsMigration()).toBe(false);
+        expect(registry.read().sessions?.db?.entry.args).toEqual([runtimeScript("db"), "--catalog"]);
+        expect(registry.read().connections.gamma.entry).toEqual({ command: process.execPath, args: [runtimeScript("db")], env: legacyEntry().env });
+        for(const target of targets) expect(target.readEntries().akms_db.args).toEqual([runtimeScript("db"), "--catalog"]);
+        expect(registry.read().connections.alpha.entry).toEqual(entry());
+    });
+    it("waits for @akms/mcp, and the migration screen installs it before applying", async () => {
+        const { registry, options, targets } = legacyFixture();
+        const find = options.find!; options.find = () => null;
+        options.install = vi.fn(async () => { options.find = find; });
+        expect(registry.planMigration().launches).toEqual([{ kind: "db", names: ["akms_db", "gamma"], ready: false }]);
+        const declined = await screen(["n"], prompt => migrationMenu(prompt, registry));
+        expect(declined).toContain("Install @akms/mcp now? (Y/n)");
+        expect(declined).toContain("Nothing can be migrated until @akms/mcp is installed");
+        expect(registry.needsMigration()).toBe(true);
+        const applied = await screen(["", "y"], prompt => migrationMenu(prompt, registry));
+        expect(options.install).toHaveBeenCalledOnce();
+        expect(applied).toContain("Registry migration saved");
+        expect(registry.needsMigration()).toBe(false);
+        expect(targets[1].readEntries().akms_db.args[0]).toBe(runtimeScript("db"));
+    });
+    it("keeps old packages while anything starts them, then removes only those", async () => {
+        const { registry, options } = legacyFixture();
+        options.legacy = () => [{ kind: "db", packageName: "@akms/mcp-db", version: "0.3.2", linked: false }];
+        options.removeLegacy = vi.fn(async () => {});
+        const before = registry.legacyRuntimes()[0].usedBy;
+        expect(before).toEqual(expect.arrayContaining(["AKMS catalog: akms_db", "cursor: akms_db", "codex: akms_db"]));
+        await expect(registry.removeLegacyRuntimes(["db"])).rejects.toThrow(/Still in use: @akms\/mcp-db/);
+        expect(await screen(["b"], prompt => runtimeMenu(prompt, registry))).toContain("Old packages still in use: @akms/mcp-db");
+        registry.applyMigration(registry.planMigration());
+        expect(registry.legacyRuntimes()[0].usedBy).toEqual([]);
+        const text = await screen(["remove", "y", "b"], prompt => runtimeMenu(prompt, registry));
+        expect(text).toContain("Remove these packages? (y/N)");
+        expect(options.removeLegacy).toHaveBeenCalledExactlyOnceWith(["db"]);
     });
 });

@@ -10,7 +10,7 @@ export async function runConnectionCheck(env: S3Env, output: Writable): Promise<
     try {
         progress.start("Validate connection settings");
         const profile = loadS3Profile(env);
-        if(!profile) throw new ConfigError("S3 is not configured. Run akms-mcp-s3 config.");
+        if(!profile) throw new ConfigError("S3 is not configured. Run npx -y @akms/mcp@latest s3.");
         store = new S3Store(profile);
         const report = await store.check((phase) => progress.start(phase));
         progress.finish(true);

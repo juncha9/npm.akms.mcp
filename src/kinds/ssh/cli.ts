@@ -68,11 +68,12 @@ const HELP_TEXT = [
     `${SERVER_NAME} ${SERVER_VERSION} — MCP server for SSH command execution and SFTP transfers`,
     "",
     "Usage:",
-    "  akms-mcp-ssh [--check]",
-    "  akms-mcp-ssh --catalog           Load SSH connections from the shared registry",
-    "  akms-mcp-ssh config [--target <client>]",
-    "  akms-mcp-ssh register          Register AI services for all AKMS connections",
-    "  akms-mcp-ssh sync              Review differences and retry pending changes",
+    "  node ssh.js [--check]",
+    "  node ssh.js --catalog            Load SSH connections from the shared registry",
+    "  node ssh.js config [--target <client>]",
+    "  node ssh.js register           Register AI services for all AKMS connections",
+    "  node ssh.js sync               Review differences and retry pending changes",
+    "  (lib/ssh.js of the installed @akms/mcp; the AKMS MCP menu: npx -y @akms/mcp@latest)",
     "",
     "Commands:",
     "  config               Manage the SSH hosts in the shared AKMS catalog —",
@@ -125,7 +126,7 @@ const HELP_TEXT = [
  */
 async function runCheckCommand(profile: SshHostProfile | null): Promise<number> {
     if (profile == null) {
-        process.stdout.write(`No SSH host is registered — set ${SINGLE_HOST_ENV.HOST} and ${SINGLE_HOST_ENV.USER}, or run: akms-mcp-ssh config\n`);
+        process.stdout.write(`No SSH host is registered — set ${SINGLE_HOST_ENV.HOST} and ${SINGLE_HOST_ENV.USER}, or run: npx -y @akms/mcp@latest ssh\n`);
         return 1;
     }
 
@@ -141,7 +142,7 @@ async function main(): Promise<void> {
     const _logger = $logger.child({ context: "cli" });
 
     if (process.argv[2] === "setup") {
-        process.stderr.write("The setup command has been removed. Use akms-mcp-ssh config.\n");
+        process.stderr.write("The setup command has been removed. Use npx -y @akms/mcp@latest ssh.\n");
         process.exitCode = 1;
         return;
     }

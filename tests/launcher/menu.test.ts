@@ -118,7 +118,7 @@ describe("unified menu", () => {
         const launch = vi.fn(async () => 0);
         expect(await runMenu({ input, output, registryPath: file, targets: [], launch })).toBe(0);
         expect(text.split("Choice")[0]).not.toContain("Migrate");
-        expect(text).toContain("Migrate registry  one server per kind becomes the default");
+        expect(text).toMatch(/Migrate registry +step 2 · one server per kind becomes the default/);
         expect(text).toContain("Migrate the registry and apply these changes? (y/N)"); expect(launch).not.toHaveBeenCalled();
         if(approved) { expect(JSON.parse(fs.readFileSync(file, "utf8")).defaultMode).toBe("catalog"); expect(fs.readFileSync(path.join(directory, "registry.previous.json"), "utf8")).toBe(original); }
         else expect(fs.readFileSync(file, "utf8")).toBe(original);

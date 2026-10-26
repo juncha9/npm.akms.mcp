@@ -193,7 +193,7 @@ describe("moving 0.3 launches to the single @akms/mcp package", () => {
         const before = registry.legacyRuntimes()[0].usedBy;
         expect(before).toEqual(expect.arrayContaining(["AKMS catalog: akms_db", "cursor: akms_db", "codex: akms_db"]));
         await expect(registry.removeLegacyRuntimes(["db"])).rejects.toThrow(/Still in use: @akms\/mcp-db/);
-        expect(await screen(["b"], prompt => runtimeMenu(prompt, registry))).toContain("Old packages still in use: @akms/mcp-db");
+        expect(await screen(["b"], prompt => runtimeMenu(prompt, registry))).toContain("In use    @akms/mcp-db 0.3.2 · old packages");
         registry.applyMigration(registry.planMigration());
         expect(registry.legacyRuntimes()[0].usedBy).toEqual([]);
         const text = await screen(["remove", "y", "b"], prompt => runtimeMenu(prompt, registry));

@@ -111,40 +111,75 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
             const installed = registry.installedRuntime();
             const target = installed && !installed.linked ? updateTarget(installed.version, latest) : null;
 
-            // (1) Where the runtime stands
-            if(!installed) prompter.write(`${paint.bold("Runtime")}  ${paint.warning("not installed")}\n`);
-            else prompter.write(`${paint.bold("Runtime")}  ${PACKAGE_NAME} ${paint.accent(installed.version)}${installed.linked ? paint.dim("  development link") : ""}\n`);
-            prompter.write(`${paint.dim("Location")}  ${plainText(runtimePrefix())}\n`);
-            if(latest === null) prompter.write(paint.warning("! Could not reach npm to check for updates.\n"));
-            else if(latest !== undefined && installed && !target) prompter.write(`${paint.success("Up to date")} ${paint.dim(`· latest ${latest}`)}\n`);
+            // (1) Where the runtime stands: the package, its folder, and any 0.3.x packages beside it
             const legacy = registry.legacyRuntimes();
             const removable = legacy.filter(item => !item.usedBy.length);
             const inUse = legacy.filter(item => item.usedBy.length);
             const migration = migrationStatus(registry);
-            if(migration.status === "waiting") prompter.write(paint.warning(`! Registry update waits: ${plainText(migration.detail ?? "")}\n`));
-            if(migration.status === "blocked") prompter.write(paint.warning(`! Registry update blocked: ${plainText(migration.detail ?? "")}\n`));
-            if(inUse.length) prompter.write(paint.warning(`! Old packages still in use: ${inUse.map(item => `${item.runtime.packageName} ${item.runtime.version}`).join(", ")}. Migrate the registry (and Sync) before removing them.\n`));
+            // "@akms/mcp-db, @akms/mcp-ssh 0.3.2": names sharing a version are listed once with it.
+            const packages = (list: typeof legacy) => [...new Set(list.map(item => item.runtime.version))]
+                .map(version => `${list.filter(item => item.runtime.version === version).map(item => item.runtime.packageName).join(", ")} ${version}`).join("; ");
+            const row = (label: string, value: string) => prompter.write(`  ${paint.dim(label.padEnd(10))}${value}\n`);
+            prompter.write(`${paint.bold("Runtime")}   ${PACKAGE_NAME} ${installed ? paint.accent(installed.version) : paint.warning("not installed")}${installed?.linked ? paint.dim("  development link") : ""}\n`);
+            row("Location", plainText(runtimePrefix()));
+            if(inUse.length) row("In use", `${paint.warning(packages(inUse))} ${paint.dim("· old packages")}`);
+            if(removable.length) row("Unused", `${packages(removable)} ${paint.dim("· old packages")}`);
+            if(latest === null) prompter.write(paint.warning("! Could not reach npm to check for updates.\n"));
+            else if(latest !== undefined && installed && !target) prompter.write(`${paint.success("Up to date")} ${paint.dim(`· latest ${latest}`)}\n`);
+
+            // (2) While an upgrade from the per-kind packages is unfinished: what is done and what comes next
+            const upgrading = legacy.length > 0 || migration.status !== "none";
+            let next: "install" | "migrate" | "remove" | null = null;
+            if(upgrading) {
+                const plan = migration.status === "none" ? null : registry.planMigration();
+                const sessions = (plan?.launches ?? []).flatMap(item => item.names.filter(name => /^akms_/.test(name)));
+                const pairs = migration.status === "ready" ? migrationVersions(registry, plan ?? undefined) : [];
+                const moves = pairs.map(pair => pair.label === "Registry" ? `registry ${pair.from} → ${pair.to}` : `${pair.from} → ${pair.to}`).join(" · ");
+                const steps = [
+                    { id: "install" as const, label: `Install ${PACKAGE_NAME}`, done: installed != null, blocked: false,
+                        detail: installed ? installed.version : "one package for every kind" },
+                    { id: "migrate" as const, label: "Migrate registry", done: migration.status === "none", blocked: migration.status === "blocked",
+                        detail: migration.status === "none" ? "" : migration.status === "blocked" ? plainText(migration.detail ?? "")
+                            : moves || (sessions.length ? `moves ${sessions.join(", ")} to ${PACKAGE_NAME}` : `moves saved entries to ${PACKAGE_NAME}`) },
+                    { id: "remove" as const, label: "Remove old packages", done: legacy.length === 0, blocked: false,
+                        detail: inUse.length && migration.status === "none" ? "run Sync first: an AI service still starts them" : "then restart your AI clients" },
+                ];
+                prompter.write(`\n${paint.bold("Upgrade steps")}\n`);
+                for(const [index, step] of steps.entries()) {
+                    let state = paint.dim("later  ");
+                    if(step.done) state = paint.success("done   ");
+                    else if(step.blocked) state = paint.error("blocked");
+                    else if(next == null) { state = paint.warning("next   "); next = step.id; }
+                    const label = step.done ? paint.dim(step.label.padEnd(22)) : step.id === next ? paint.bold(step.label.padEnd(22)) : step.label.padEnd(22);
+                    prompter.write(`  ${paint.dim(`${index + 1}`)}  ${label}${state}  ${step.id === next ? step.detail : paint.dim(step.detail)}\n`);
+                }
+            }
             prompter.write("\n");
 
-            // (2) Only what can be done now
+            // (3) Only what can be done now; the next upgrade step starts under the cursor
             const items: SelectItem<string>[] = [];
-            if(!installed) items.push({ value: "install", key: "install", label: "Install AKMS MCP", hint: `into ${plainText(runtimePrefix())}` });
+            if(!installed) items.push({ value: "install", key: "install", label: `Install ${PACKAGE_NAME}`, hint: upgrading ? "step 1" : "one package for every kind" });
             else if(target) items.push({ value: "update", key: "update", label: `Update to ${target}`, hint: `installed ${installed.version}` });
             else if(!installed.linked) items.push({ value: "check", key: "check", label: "Check for updates", hint: "asks npm for the latest release" });
             if(migration.status === "ready") {
-                // "registry v1 → v2 · @akms/mcp-db 0.3.2 →" dimmed, then the destination in green.
+                // "step 2 · @akms/mcp-db 0.3.2 →" dimmed, then the destination in green.
                 const pairs = migrationVersions(registry).map(pair => pair.label === "Registry" ? { from: `registry ${pair.from}`, to: pair.to } : pair);
                 const last = pairs.at(-1);
                 items.push({ value: "migrate", key: "migrate", label: "Migrate registry",
-                    hint: last ? [...pairs.slice(0, -1).map(pair => `${pair.from} → ${pair.to}`), `${last.from} →`].join(" · ") : "one server per kind becomes the default",
+                    hint: last ? ["step 2", ...pairs.slice(0, -1).map(pair => `${pair.from} → ${pair.to}`), `${last.from} →`].join(" · ") : "step 2 · one server per kind becomes the default",
                     ...(last ? { notice: last.to, noticeTone: "success" as const } : {}) });
             }
-            const outdated = KINDS.filter(kind => launchOutdated(registry, kind));
+            // An old launch is the migration's job while it is pending; only after it does Server layout flag one.
+            const outdated = migration.status === "none" ? KINDS.filter(kind => launchOutdated(registry, kind)) : [];
             items.push({ value: "layout", key: "layout", label: "Server layout", hint: layoutSummary(registry),
                 ...(outdated.length ? { notice: `${outdated.map(kind => KIND_LABELS[kind]).join(", ")}: launch out of date` } : {}) });
-            if(removable.length) items.push({ value: "remove", key: "remove", label: "Remove old packages", hint: `${removable.map(item => item.runtime.packageName).join(", ")} · not used` });
+            if(removable.length) {
+                items.push({ value: "remove", key: "remove", label: inUse.length ? "Remove unused packages" : "Remove old packages",
+                    hint: `${inUse.length ? "" : "step 3 · "}${removable.map(item => item.runtime.packageName).join(", ")}` });
+            }
             items.push({ value: "back", key: "b", label: "Back" });
-            const picked = await prompter.select("Runtime", items, { cancelValue: "back", ...(migration.status === "ready" ? { defaultValue: "migrate" } : {}) });
+            const defaultValue = next === "migrate" && migration.status === "ready" ? "migrate" : next === "remove" && removable.length && !inUse.length ? "remove" : undefined;
+            const picked = await prompter.select("Runtime", items, { cancelValue: "back", ...(defaultValue ? { defaultValue } : {}) });
 
             if(picked === "back") return;
             if(picked === "migrate") { await migrationMenu(prompter, registry); continue; }
@@ -230,7 +265,7 @@ async function kindLayoutMenu(prompter: RegistrationPrompter, registry: Registry
     const sessionMode = registry.isSessionMode(kind);
     const installed = registry.globalRuntime(kind);
     prompter.write(`${paint.bold(KIND_LABELS[kind])}  ${layoutLabel(registry, kind)} ${paint.dim(`· ${connectionCount(connectionNames(registry, kind).length)}`)}\n`);
-    if(!installed) prompter.write(paint.warning("! Install AKMS MCP from Runtime before changing the layout.\n"));
+    if(!installed) prompter.write(paint.warning("! Install @akms/mcp from Runtime before changing the layout.\n"));
     prompter.write("\n");
     const outdated = launchOutdated(registry, kind);
     const items: SelectItem<string>[] = [

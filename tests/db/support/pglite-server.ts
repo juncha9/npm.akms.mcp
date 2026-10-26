@@ -24,6 +24,9 @@ export async function startPgliteServer(): Promise<PgliteServer> {
         url: `postgres://postgres@127.0.0.1:${port}/postgres`,
         async stop() {
             await server.stop();
+            // A socket that closed last queued handleClose with setImmediate, and it reads
+            // database.isInTransaction(); let it run before the database goes away
+            await new Promise((resolve) => setImmediate(resolve));
             await database.close();
         },
     };

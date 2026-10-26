@@ -1,75 +1,87 @@
 # Development
 
-## Release guard and package order
+This repository builds the setup CLI and the Database, SSH, WSL and S3 MCP servers as one `@akms/mcp` package. Start with [README.md](README.md) for installation, runtime layout, migration and catalog security.
 
-Run `npm run prepublishOnly` to inspect every publish prerequisite without publishing. `npm publish` runs the same `node scripts/release-guard.mjs` gate. It requires a clean `git status --porcelain`, a package version newer than the configured registry's `latest`, matching `SERVER_VERSION` (servers only), and five registration copies matching the DB baseline. Metadata uses a fresh temporary cache. Any lookup failure, including E404, or a missing `latest` tag blocks release. All five sibling checkouts are needed for release comparison; normal builds and installed packages do not need them.
+## Commands
 
-The DB registration directory is the baseline. Run `node scripts/sync-registration.mjs` from the DB checkout after common changes. The launcher keeps its own adapters and its `prompter.ts` import is adjusted for `launcher/prompter`. Keep the five development-only `scripts/release-guard.mjs` copies identical.
-
-Release in this order:
-
-1. Publish `@akms/mcp-ssh` with AKMS registry protection first, after its tests, build, package inspection, reviewed commit and release gate pass.
-2. Raise `@akms/mcp-wsl`'s SSH dependency minimum to that published protected release, remove ranges permitting SSH 0.1.9, and refresh its lockfile and local dependency. WSL's release gate calls the installed SSH guard against `.akms/mcp` reads and writes; the current SSH 0.1.9 must fail, regardless of the WSL version.
-3. Validate and publish WSL, then the DB and S3 servers. Align each manifest, lockfile and `SERVER_VERSION`, synchronize registration, and commit reviewed release changes before running the gate.
-4. Publish the optional `@akms/mcp` launcher last, once every child can be installed from npm.
-
-The guard never commits, installs dependencies or publishes. `npm pack --dry-run` inspects contents without invoking this publish-only gate.
-
-For installation and usage, see [README.md](./README.md).
+From the repository root, with Node.js 22+ and npm:
 
 ```sh
 npm ci
-npm test
+npm run typecheck
 npm run build
-npm start
-npm pack --dry-run
+npm test
 ```
 
-`npm run dev` runs the TypeScript entry without a build. The published package contains the bundled CLI, package manifest, README, changelog and MIT license. `prepack` rebuilds before packaging or publishing. The registration adapters use `smol-toml` to validate Codex configuration.
+`npm run dev` runs the setup source with tsx. `npm start` opens the built setup menu. To run one test project or a focused file without the `pretest` rebuild:
 
-## Package files
+```sh
+npm exec -- vitest run --project db
+npm exec -- vitest run tests/registration/registration-ux.test.ts
+```
 
-`.npmignore` owns the package exclusions; `package.json` intentionally has no `files` allowlist. It excludes source, tests, build configuration, development documents, temporary files and existing tarballs. Inspect `npm pack --dry-run --json` after changing the project layout.
+`npm test` runs `pretest`, which builds first. `npm run test:watch` opens Vitest watch mode; `npm run test:coverage` collects coverage.
 
-`CHANGELOG.md` records release changes. Update its release status and keep the versions in `package.json` and `package-lock.json` synchronized when releasing. The build takes the CLI version from `package.json`.
+## Source and build layout
 
-The launcher exposes only a CLI through `bin`; it has no library entry, so the sibling servers' `main`, `module`, `types` and `exports` fields do not apply. Public publishing is configured by `publishConfig.access` in `package.json`.
+```text
+src/
+  cli.ts                       setup entry
+  _defs/                       package version and supported kinds
+  _types/
+  modules/
+    launcher/                  arguments, main menu and setup process handoff
+    registration/              shared registry, clients, Runtime, Sync and migration
+    session-server.ts          connection-prefixed tool routing
+    prompt-errors.ts           shared Back/Closed error classes
+  kinds/
+    db/                        PostgreSQL driver, parser, policies, tools and setup
+    ssh/                       SSH/SFTP connections, policies, tools and setup
+    wsl/                       Windows process transport, policies, tools and setup
+    s3/                        storage clients, policies, tools and setup
+tests/
+  launcher/  registration/  db/  ssh/  wsl/  s3/  support/
+docs/
+  db.md  ssh.md  wsl.md  s3.md  user guides
+  db/  ssh/  wsl/  s3/         implementation notes and earlier release histories
+lib/
+  cli.js                       akms-mcp
+  db.js  ssh.js  wsl.js  s3.js  server, config and --check entries
+```
 
-## Boundaries
+The only npm `bin` is `akms-mcp`. Server entries are direct Node paths to `lib/<kind>.js`; they are not additional npm commands. The package has no public library exports.
 
-- `src/_defs/index.ts` maps the supported packages to their binaries. Every child is opened with `config`, which all four packages support. The S3 package must be published before the launcher's S3 route can resolve it from npm.
-- `src/modules/launcher/menu.ts` selects a package and exposes shared Register/Sync/Runtime/Updates screens. It releases input listeners and raw mode before handing the terminal to the child, then resumes when setup ends.
-- `src/modules/launcher/prompter.ts` adapts the selection/rendering code shared by the existing SSH and WSL projects. Text and secret editors remain in those projects. This copy adds listener cleanup and piped-input handoff because the launcher repeatedly yields stdin to another process.
-- `src/modules/launcher/npm.ts` uses the registration copy's `findGlobalRuntime` and `installGlobalRuntime`. Installed setup runs as Node plus the runtime CLI path, with no npm discovery or version lookup. npm performs registry authentication, scoped registry selection and installation only when installation or fallback is approved.
+`tsup.config.ts` builds independent ESM entries with splitting disabled. Each kind loads its own code and drivers, so importing another kind's server or SDK at the shared entry would change startup and memory behavior. The build injects `__PACKAGE_VERSION__` from the root package manifest into all entries.
 
-## Runtime and fallback contract
+TypeScript aliases are `@/` for shared source and `@db/`, `@ssh/`, `@wsl/`, `@s3/` for kind source. The root typecheck includes source, tests and build/test configuration. Vitest projects keep tests separated by kind; the DB project sets `DB_MCP_LOG_LEVEL=silent`, and the projects use forked workers.
 
-Open the installed runtime's `config [--target <client>]` directly. Do not query npm on this path. Missing runtimes require an installation confirmation (default Yes), followed by rediscovery before execution. An installation failure displays its reason and offers npm setup (default No). Close the confirmation's input listeners and raw mode before launching any child, preserving read-ahead answers for that child.
+## Shared setup and runtime contracts
 
-Only after explicit fallback approval, run `npm view <package>@latest version --json` with a fresh temporary metadata cache and online flags. Delete the cache afterwards and stop on lookup failure. Then run `npm exec --yes --package=<package>@<resolved-version> -- <binary> config` using npm's normal execution cache. `latest` means npm's publisher-controlled dist-tag. No fallback happens automatically, and no version is persisted in the launcher.
+- Registration, Sync, import and migration have one shared implementation. Do not restore per-kind copies or add a dependency on a separate setup package.
+- Main-menu shared actions stay outside kind-specific connection lists. Saving a connection still performs reconciliation and startup checks through the shared registry adapter.
+- `src/modules/registration/runtime.ts` discovers one dedicated `@akms/mcp` installation and its `lib/<kind>.js` entries. Runtime installation and updates operate on this package once for all kinds.
+- `src/modules/launcher/npm.ts` opens a kind's installed `config` entry. If installation fails and the user approves, it can open the kind's bundled setup from this package; it does not run a separate `npm exec` setup fallback.
+- Preserve the registry version 1 reader and version 2 session format. Runtime shows Migrate registry only when changes can be applied; missing or blocked prerequisites have a status message. The ordered `single_package` migration repoints recognized legacy launches, then reconciliation updates managed client entries. Missing runtimes and external edits must preserve old settings until reviewed.
+- Old-package cleanup inspects catalog and client references again before removal. The removal confirmation defaults to No.
+- Shared prompt errors come from `src/modules/prompt-errors.ts`. Kind prompters retain their own rendering/editing code but must throw those shared classes so Esc and closed input cross screen boundaries correctly.
 
-The launcher does not rewrite the MCP entries saved by child setup screens. Their later server-start behavior belongs to the corresponding MCP package.
+Catalog passwords and `registry.previous.json` are plaintext. Fixtures must use temporary catalogs, fake credentials and temporary client settings, never the developer's real configuration. See the [registration design](docs/db/design/registration.md) for the reconciliation and backup invariants.
 
-## Verification
+## Verification and package contents
 
-- Selection tests exercise arrow keys, Esc, Ctrl+C, narrow-terminal rendering, input listener cleanup, piped answers and returning from child setup.
-- The registry test starts a short-lived local fixture registry and invokes real npm. It moves `latest` despite a long cache lifetime, then returns HTTP 503 to check that no stale version is accepted.
-- CLI integration tests use temporary installed runtimes and a fixture npm script. They verify that installed setup makes zero npm calls, installation uses its resulting runtime, fallback requires approval, and input/client/exit-status forwarding survives both confirmations. Real client settings and global installations are untouched. `AKMS_TEST_BUILT_CLI` can point these process tests at an isolated build.
+Use `npm pack --dry-run --json` to inspect the package. Its `prepack` hook rebuilds. The `files` allowlist includes `lib`, the public README, changelog and license; source, tests, development notes and fixtures stay in the repository.
 
-Before release, run tests, build, and inspect `npm pack --dry-run`. Publish with `npm publish --access public` when releasing this version.
+For runtime or migration changes, install a package tarball into a temporary prefix and test both fresh registration and an upgrade from legacy client/catalog copies. Verify the rewritten launch paths, startup tool coverage, retained external edits, old-package cleanup and client restart behavior. Keep actual credentials and user settings outside these tests.
 
-## Registration code
+The build cleans its output directory. When a running MCP is linked to a checkout's `lib`, validate in an isolated copy and replace verified artifacts without deleting the live directory. Keep source-map paths relative to the final `lib` location.
 
-The local `src/modules/registration` copy is bundled into this package. It needs no launcher or sibling checkout at build or runtime. The sibling DB checkout maintains the shared files; its `node scripts/sync-registration.mjs` command updates development copies. Keep schema version 1 compatible across releases and test standalone registration before publishing.
+The release guard checks package inputs and registry version metadata before publishing.
 
-## Child runtime development
+## Kind-specific notes
 
-Each MCP runtime is installed under `<AKMS_MCP_HOME or ~/.akms/mcp>/runtime`, independent of Node versions. To use a built child checkout, run `npm install -g --prefix "<AKMS runtime directory>" "<child checkout path>"`. Runtime detects the link and hides Update. Build children before linking and reconnect AI clients after rebuilding. The helper itself remains optional; see each child's README_DEV for platform-specific commands.
+- [Database implementation notes](docs/db/README_DEV.md) and [design](docs/db/DESIGN.md)
+- [SSH implementation notes](docs/ssh/README_DEV.md)
+- [WSL implementation notes](docs/wsl/README_DEV.md)
+- [S3 implementation notes](docs/s3/README_DEV.md) and [design](docs/s3/DESIGN.md)
 
-## Session-server compatibility
-
-Setup reads registry versions 1 and 2. New catalogs start at version 2 with `defaultMode: "catalog"`; their first connection of each kind creates its session launch. Existing version 1 catalogs require the confirmed Runtime switch. Existing version 2 catalogs without `defaultMode` retain individual mode for kinds without explicit session state. Per-kind choices override the default, and rollback keeps version 2 so older setup cannot recreate individual entries. Server `--catalog` readers accept both versions without locks or writes. The common `catalog.ts` has no dependency on setup or the optional helper. Include it in the five-copy release comparison. `registration-session.test.ts` covers migration/rollback, backup failure, name budgets, external edits, replacement ordering and bundle startup coverage.
-
-During active MCP development, build a disposable source copy and validate it before replacing live `lib` files. The normal build removes `lib`; running it beneath a connected MCP can break active sessions.
-
-Registry migrations are ordered in `registry.ts`: `v1_to_v2`, then `catalog_default`. `needsMigration`, `planMigration`, and `applyMigration` support scripted review/application; the plan is rechecked under the normal lock. Session planning and state transitions are shared with `planSession`/`applySession`, while one outer mutation preserves the pre-migration backup. `setDefaultMode("individual")` and `setDefaultMode("catalog")` change only the future-kind default after migration. An explicit individual marker remains current format. `registration-migration.test.ts` covers migration, no-op repetition, backup, stale plans, external edits, missing runtimes, rollback preservation and menu approval. Include `migration-menu.ts` in common-file synchronization.
+These retained notes include background from the 0.3.x standalone packages. Use this root guide for current source paths, commands, build configuration and package boundaries; historical library and release examples in the kind notes do not define the 0.4.0 package interface.

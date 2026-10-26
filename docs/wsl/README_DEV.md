@@ -1,5 +1,7 @@
 # Development
 
+For the current unified package, use the [root contributor guide](../../README_DEV.md). WSL source now lives under `src/kinds/wsl/`, and the WSL guard imports the bundled SSH guard source. The notes below retain implementation background from the 0.3.x standalone package; their standalone commands, library exports and release steps are historical.
+
 ## Release guard and package order
 
 Run `npm run prepublishOnly` to inspect every publish prerequisite without publishing. `npm publish` runs the same `node scripts/release-guard.mjs` gate. It requires a clean `git status --porcelain`, a package version newer than the configured registry's `latest`, matching `SERVER_VERSION` (servers only), and five registration copies matching the DB baseline. Metadata uses a fresh temporary cache. Any lookup failure, including E404, or a missing `latest` tag blocks release. All five sibling checkouts are needed for release comparison; normal builds and installed packages do not need them.
@@ -15,7 +17,7 @@ Release in this order:
 
 The guard never commits, installs dependencies or publishes. `npm pack --dry-run` inspects contents without invoking this publish-only gate.
 
-Sibling of [`@akms/mcp-ssh`](https://github.com/alkemic-studio/npm.akms.mcp-ssh) — same layout, same build, same tool surface with `ssh_` → `wsl_`. The design record with the measurements behind each decision is `akms.docs/mcp-wsl-design.md`.
+Sibling of [`@akms/mcp-ssh`](https://github.com/alkemic-studio/npm.akms.mcp-ssh) — same layout, same build, same tool surface with `ssh_` → `wsl_`.
 
 ## 🧑‍💻 Commands
 
@@ -29,7 +31,7 @@ npm run build            # tsc --noEmit → tsup (esm + cjs + dts into lib/)
 npm test                 # vitest; live cases require MCP_WSL_TEST_DISTRO
 ```
 
-`--check` needs `WSL_DISTRO` (and optionally `WSL_USER`) in the current shell; see the [PowerShell example](README.md#check-it-before-wiring-it-up). The live-test variables below are separate from those server settings.
+`--check` needs `WSL_DISTRO` (and optionally `WSL_USER`) in the current shell; see the [PowerShell example](../wsl.md#check-it-before-wiring-it-up). The live-test variables below are separate from those server settings.
 
 ## 🗂️ Layout
 
@@ -97,7 +99,7 @@ Written fresh: the settings form (`host-form.ts`) and the entry mapping. There i
 
 Esc inside a field returns to the form with the cursor on that row. mcp-ssh's form snapshots and restores its state around every pick, because a route choice opens a jump-host question after the route is already set; no WSL setting does that — every editor assigns only once its prompt is answered — so this form has no snapshot to restore. A setting that ever asks a follow-up after assigning needs one.
 
-The check is the server's own path: the entry about to be written goes through `loadHostProfile(env)` and the same `runDistroCheck` report `--check` prints, so a value the server would reject is caught before it is written. Running `id` starts a stopped distro, which is why the Test row and the Save prompt say so. Full rules and rationale are in [docs/design/setup-command.md](docs/design/setup-command.md).
+The check is the server's own path: the entry about to be written goes through `loadHostProfile(env)` and the same `runDistroCheck` report `--check` prints, so a value the server would reject is caught before it is written. Running `id` starts a stopped distro, which is why the Test row and the Save prompt say so. Full rules and rationale are in [setup-command.md](design/setup-command.md).
 
 ### A dead stderr is never a reason to stay
 

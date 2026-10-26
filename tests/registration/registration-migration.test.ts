@@ -71,17 +71,20 @@ describe("ordered registry migration", () => {
         targets.forEach((target, index) => { expect(target.writeEntry).not.toHaveBeenCalled(); expect(target.removeEntry).not.toHaveBeenCalled(); expect(fs.readFileSync(target.location, "utf8")).toBe(clients[index]); });
         registry.target("s3").writeEntry("bucket", entry("s3")); expect(targets[0].readEntries().akms_s3.args.at(-1)).toBe("--catalog");
     });
-    it("keeps a kind explicitly switched back to individual entries", () => {
+    it("groups a kind an older setup switched back to per-connection entries", () => {
         const { registry, targets } = fixture(); registry.write("ssh", "host", entry("ssh"));
         registry.applySession(registry.planSession("db", "catalog")); registry.applySession(registry.planSession("db", "individual"));
-        const plan = registry.planMigration(); expect(plan.kinds.find(item => item.kind === "db")?.status).toBe("individual");
-        registry.applyMigration(plan); expect(registry.isSessionMode("db")).toBe(false); expect(registry.isSessionMode("ssh")).toBe(true);
-        expect(Object.keys(targets[0].readEntries()).sort()).toEqual(["akms_ssh", "alpha", "beta"]);
+        const plan = registry.planMigration();
+        expect(plan.steps.map(step => step.id)).toContain("group_all");
+        expect(plan.kinds.find(item => item.kind === "db")?.status).toBe("convert");
+        registry.applyMigration(plan); expect(registry.isSessionMode("db")).toBe(true); expect(registry.isSessionMode("ssh")).toBe(true);
+        expect(registry.needsMigration()).toBe(false);
+        expect(Object.keys(targets[0].readEntries()).sort()).toEqual(["akms_db", "akms_ssh"]);
     });
-    it("does not retry unrelated client repairs during marker-only migration or a default change", () => {
+    it("does not retry unrelated client repairs during marker-only migration", () => {
         const { registry, targets } = fixture(); registry.applySession(registry.planSession("db", "catalog"));
         targets[0].removeEntry("akms_db"); clearWrites(targets);
-        expect(registry.applyMigration(registry.planMigration())).toEqual([]); registry.setDefaultMode("individual");
+        expect(registry.applyMigration(registry.planMigration())).toEqual([]);
         for(const target of targets) { expect(target.writeEntry).not.toHaveBeenCalled(); expect(target.removeEntry).not.toHaveBeenCalled(); }
         expect(targets[0].readEntries().akms_db).toBeUndefined(); registry.sync(); expect(targets[0].readEntries().akms_db).toBeDefined();
     });
@@ -106,12 +109,15 @@ describe("ordered registry migration", () => {
         const missing = registry.planMigration(); options.find = find;
         expect(() => registry.applyMigration(missing)).toThrow(/availability changed/); expect(fs.readFileSync(registry.file, "utf8")).toBe(before);
     });
-    it("does nothing when applied again, including after explicitly turning the default off", () => {
+    it("does nothing when applied again, and groups a per-connection default left by an older setup", () => {
         const { registry, targets, backup } = fixture(); registry.applyMigration(registry.planMigration());
         const before = fs.readFileSync(registry.file, "utf8"), previous = fs.readFileSync(backup, "utf8"); clearWrites(targets);
         expect(registry.applyMigration(registry.planMigration())).toEqual([]); expect(fs.readFileSync(registry.file, "utf8")).toBe(before); expect(fs.readFileSync(backup, "utf8")).toBe(previous);
         for(const target of targets) { expect(target.writeEntry).not.toHaveBeenCalled(); expect(target.removeEntry).not.toHaveBeenCalled(); }
-        registry.setDefaultMode("individual"); expect(registry.needsMigration()).toBe(false); expect(registry.planMigration().steps).toEqual([]);
+        expect(registry.planMigration().steps).toEqual([]);
+        fs.writeFileSync(registry.file, JSON.stringify({ ...registry.read(), defaultMode: "individual" }));
+        expect(registry.planMigration().steps.map(step => step.id)).toEqual(["group_all"]);
+        registry.applyMigration(registry.planMigration()); expect(registry.read().defaultMode).toBe("catalog"); expect(registry.needsMigration()).toBe(false);
     });
     it("shows the config notice and action only for an older format", async () => {
         const { registry, targets, options } = fixture(); const management = new ManagedSession({ kind: "db", targets, registryPath: registry.file, runtimeOptions: options });
@@ -127,20 +133,20 @@ describe("ordered registry migration", () => {
         const applied = await screen(["y"], prompt => migrationMenu(prompt, registry)); expect(applied).toContain("Registry migration saved"); expect(applied).toContain("OK akms_db"); expect(applied).not.toContain("fixture-private-secret");
         expect(options.check).toHaveBeenCalledTimes(1); expect(fs.readFileSync(backup, "utf8")).toBe(before);
     });
-    it("turns the future-kind default off and on from Runtime while preserving existing modes", async () => {
-        const { registry, targets } = fixture(); expect(() => registry.setDefaultMode("individual")).toThrow(/Migrate registry/); registry.applyMigration(registry.planMigration());
-        await screen(["layout", "default", "", "b", "b"], prompt => runtimeMenu(prompt, registry)); expect(registry.read().defaultMode).toBe("catalog");
-        await screen(["layout", "default", "y", "b", "b"], prompt => runtimeMenu(prompt, registry)); expect(registry.read().defaultMode).toBe("individual"); expect(registry.isSessionMode("db")).toBe(true);
-        registry.target("ssh").writeEntry("host", entry("ssh")); expect(targets[0].readEntries().host).toBeDefined();
-        registry.setDefaultMode("catalog"); expect(registry.isSessionMode("ssh")).toBe(false); registry.target("s3").writeEntry("bucket", entry("s3")); expect(targets[0].readEntries().akms_s3).toBeDefined();
+    it("offers no way to list connections one entry each: new kinds are grouped too", async () => {
+        const { registry, targets } = fixture(); registry.applyMigration(registry.planMigration());
+        const text = await screen(["b"], prompt => runtimeMenu(prompt, registry));
+        expect(text).not.toMatch(/separately|one per connection|AI service entries|Server layout/);
+        registry.target("ssh").writeEntry("host", entry("ssh")); registry.target("s3").writeEntry("bucket", entry("s3"));
+        expect(Object.keys(targets[0].readEntries()).sort()).toEqual(["akms_db", "akms_s3", "akms_ssh"]);
     });
-    it("blocks invalid-name migration and refuses to change a pending kind's implicit mode", async () => {
+    it("blocks invalid-name migration, then groups a kind still waiting for the runtime", async () => {
         const { registry, options } = fixture(); const state = registry.read(); state.connections["x".repeat(36)] = state.connections.alpha; delete state.connections.alpha;
         fs.writeFileSync(registry.file, JSON.stringify(state)); const before = fs.readFileSync(registry.file, "utf8");
         const plan = registry.planMigration(); expect(plan.kinds[0].status).toBe("blocked"); expect(() => registry.applyMigration(plan)).toThrow(/Resolve blocked/);
         expect(await screen([], prompt => migrationMenu(prompt, registry))).toContain("Resolve blocked kinds"); expect(fs.readFileSync(registry.file, "utf8")).toBe(before);
         delete state.connections["x".repeat(36)]; fs.writeFileSync(registry.file, JSON.stringify(state)); options.find = () => null;
-        registry.applyMigration(registry.planMigration()); expect(() => registry.setDefaultMode("individual")).toThrow(/pending runtimes/); expect(registry.read().defaultMode).toBe("catalog");
+        registry.applyMigration(registry.planMigration()); expect(registry.read().defaultMode).toBe("catalog"); expect(registry.isSessionMode("db")).toBe(true);
     });
 });
 

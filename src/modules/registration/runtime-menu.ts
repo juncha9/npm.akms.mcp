@@ -1,5 +1,6 @@
 import { PACKAGE_VERSION } from "../../_defs";
 import { Registry, entryHash, sessionName } from "./registry";
+import type { SyncResult } from "./registry";
 import { CLIENT_LABELS, KIND_LABELS, KINDS } from "./types";
 import type { McpKind } from "./types";
 import { PACKAGE_NAME, runtimeIsOlder, runtimePrefix } from "./runtime";
@@ -62,23 +63,14 @@ function connectionNames(registry: Registry, kind?: McpKind): string[] {
     return Object.entries(registry.read().connections).filter(([, item]) => item.entry && (!kind || item.kind === kind)).map(([name]) => name);
 }
 
-const connectionCount = (count: number) => `${count} connection${count === 1 ? "" : "s"}`;
-
-/** How a kind's connections are listed in each AI service: one akms_<kind> entry, or one entry each. */
-function entryLabel(registry: Registry, kind: McpKind): string {
-    return registry.isSessionMode(kind) ? `grouped as ${sessionName(kind)}` : "one entry per connection";
-}
-
-/** True when the saved launch of this kind no longer matches the installed runtime. */
-function launchOutdated(registry: Registry, kind: McpKind): boolean {
-    if(!registry.globalRuntime(kind)) return false;
-    try {
-        if(registry.isSessionMode(kind)) {
-            const saved = registry.read().sessions?.[kind]?.entry;
-            return saved != null && entryHash(saved) !== entryHash(registry.sessionEntry(kind));
-        }
-        return registry.planRuntime(kind).names.length > 0;
-    } catch { return false; }
+/** Kinds whose akms_<kind> entry no longer starts the installed runtime, e.g. after Node or the runtime folder moved. */
+function outdatedKinds(registry: Registry): McpKind[] {
+    return KINDS.filter(kind => {
+        if(!registry.isSessionMode(kind) || !registry.globalRuntime(kind)) return false;
+        const saved = registry.read().sessions?.[kind]?.entry;
+        try { return saved != null && entryHash(saved) !== entryHash(registry.sessionEntry(kind)); }
+        catch { return false; }
+    });
 }
 
 async function installOrUpdate(prompter: RegistrationPrompter, registry: Registry): Promise<void> {
@@ -141,7 +133,7 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
                         detail: installed ? installed.version : "one package for every kind" },
                     { id: "migrate" as const, label: "Migrate registry", done: migration.status === "none", blocked: migration.status === "blocked",
                         detail: migration.status === "none" ? "" : migration.status === "blocked" ? plainText(migration.detail ?? "")
-                            : moves || (sessions.length ? `moves ${sessions.join(", ")} to ${PACKAGE_NAME}` : `moves saved entries to ${PACKAGE_NAME}`) },
+                            : moves || (sessions.length ? `moves ${sessions.join(", ")} to ${PACKAGE_NAME}` : "one akms_<kind> entry per kind") },
                     { id: "remove" as const, label: "Remove old packages", done: legacy.length === 0, blocked: false,
                         detail: inUse.length && migration.status === "none" ? "run Sync first: an AI service still starts them" : "then restart your AI clients" },
                 ];
@@ -167,13 +159,12 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
                 const pairs = migrationVersions(registry).map(pair => pair.label === "Registry" ? { from: `registry ${pair.from}`, to: pair.to } : pair);
                 const last = pairs.at(-1);
                 items.push({ value: "migrate", key: "migrate", label: "Migrate registry",
-                    hint: last ? ["step 2", ...pairs.slice(0, -1).map(pair => `${pair.from} → ${pair.to}`), `${last.from} →`].join(" · ") : "step 2 · grouped entries become the default",
+                    hint: last ? ["step 2", ...pairs.slice(0, -1).map(pair => `${pair.from} → ${pair.to}`), `${last.from} →`].join(" · ") : "step 2 · one akms_<kind> entry per kind",
                     ...(last ? { notice: last.to, noticeTone: "success" as const } : {}) });
             }
-            // An old launch is the migration's job while it is pending; only after it does this row flag one.
-            const outdated = migration.status === "none" ? KINDS.filter(kind => launchOutdated(registry, kind)) : [];
-            items.push({ value: "layout", key: "layout", label: "AI service entries", hint: entrySummary(registry),
-                ...(outdated.length ? { notice: `${outdated.map(kind => KIND_LABELS[kind]).join(", ")}: launch out of date` } : {}) });
+            // An old launch is the migration's job while it is pending; only after it does this row appear.
+            const outdated = migration.status === "none" ? outdatedKinds(registry) : [];
+            if(outdated.length) items.push({ value: "relaunch", key: "relaunch", label: "Update launch commands", hint: outdated.map(sessionName).join(", "), notice: "out of date" });
             if(removable.length) {
                 items.push({ value: "remove", key: "remove", label: inUse.length ? "Remove unused packages" : "Remove old packages",
                     hint: `${inUse.length ? "" : "step 3 · "}${removable.map(item => item.runtime.packageName).join(", ")}` });
@@ -190,7 +181,7 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
                 latest = await registry.latestRuntime();
                 continue;
             }
-            if(picked === "layout") { await entriesMenu(prompter, registry); continue; }
+            if(picked === "relaunch") { await updateLaunchCommands(prompter, registry, outdated); continue; }
             if(picked === "remove") {
                 prompter.clearScreen();
                 prompter.write(`${paint.bold("Remove old packages")}\n`);
@@ -210,125 +201,20 @@ export async function runtimeMenu(prompter: RegistrationPrompter, registry: Regi
     }
 }
 
-/** "grouped: akms_db, akms_ssh" — what the AI services list for the kinds that have connections. */
-function entrySummary(registry: Registry): string {
-    const used = KINDS.filter(kind => connectionNames(registry, kind).length);
-    if(!used.length) return registry.read().defaultMode === "individual" ? "one per connection" : "grouped";
-    const grouped = used.filter(kind => registry.isSessionMode(kind));
-    const separate = used.filter(kind => !registry.isSessionMode(kind));
-    return [
-        grouped.length ? `grouped: ${grouped.map(sessionName).join(", ")}` : "",
-        separate.length ? `one per connection: ${separate.map(kind => KIND_LABELS[kind]).join(", ")}` : "",
-    ].filter(Boolean).join(" · ");
-}
-
-async function entriesMenu(prompter: RegistrationPrompter, registry: Registry): Promise<void> {
-    let defaultValue: string | undefined;
-    for(;;) {
-        prompter.clearScreen();
-        const paint = prompter.paint;
-        prompter.write(`${paint.bold("AI service entries")}\n`);
-        prompter.write(paint.dim("How your connections are listed in Claude Code, Codex and the other AI services.\n"));
-        prompter.write(`  ${paint.accent("Grouped")}${paint.dim(" (recommended): one akms_<kind> entry per kind; passwords stay in the AKMS catalog.")}\n`);
-        prompter.write(`  ${paint.accent("One per connection")}${paint.dim(": each connection is its own entry, with its password in the service's settings.")}\n\n`);
-        const state = registry.read();
-        const migrated = !registry.needsMigration(state);
-        const items: SelectItem<string>[] = KINDS.map(kind => {
-            const count = connectionNames(registry, kind).length;
-            return {
-                value: kind, key: kind, label: KIND_LABELS[kind],
-                hint: count ? `${entryLabel(registry, kind)} · ${connectionCount(count)}` : `no connections · new ones are ${registry.isSessionMode(kind) ? "grouped" : "listed one per connection"}`,
-                ...(launchOutdated(registry, kind) ? { notice: "launch out of date" } : {}),
-            };
-        });
-        items.push({ separator: true });
-        if(migrated) items.push({ value: "default", key: "default", label: "New kinds", hint: state.defaultMode === "catalog" ? "grouped" : "one entry per connection" });
-        items.push({ value: "back", key: "b", label: "Back" });
-        const picked = await prompter.select("AI service entries", items, { defaultValue, cancelValue: "back" });
-        if(picked === "back") return;
-        defaultValue = picked;
-        if(picked === "default") {
-            const mode = state.defaultMode === "catalog" ? "individual" : "catalog";
-            prompter.write(`New kinds will be ${mode === "catalog" ? "grouped" : "listed one entry per connection"}. Existing kinds keep theirs.\n`);
-            if(await prompter.askYesNo("Change this for new kinds?", false)) {
-                prompter.write(`${registry.formatResults(registry.setDefaultMode(mode), "Saved for new kinds.", prompter.paint)}\n`);
-                await prompter.acknowledge();
-            }
-            continue;
-        }
-        try { await kindEntriesMenu(prompter, registry, picked as McpKind); }
-        catch(error) {
-            if(error instanceof PromptClosedError) throw error;
-            if(error instanceof PromptBackError) continue;
-            prompter.write(`${error instanceof Error ? plainText(error.message) : "Could not change the AI service entries."}\n`);
-            await prompter.acknowledge();
-        }
-    }
-}
-
-async function kindEntriesMenu(prompter: RegistrationPrompter, registry: Registry, kind: McpKind): Promise<void> {
+/** Point each out-of-date akms_<kind> entry at the installed runtime; connection settings stay in the catalog. */
+async function updateLaunchCommands(prompter: RegistrationPrompter, registry: Registry, kinds: McpKind[]): Promise<void> {
     const paint = prompter.paint;
     prompter.clearScreen();
-    const sessionMode = registry.isSessionMode(kind);
-    const installed = registry.globalRuntime(kind);
-    prompter.write(`${paint.bold(KIND_LABELS[kind])}  ${entryLabel(registry, kind)} ${paint.dim(`· ${connectionCount(connectionNames(registry, kind).length)}`)}\n`);
-    if(!installed) prompter.write(paint.warning("! Install @akms/mcp from Runtime first.\n"));
-    prompter.write("\n");
-    const outdated = launchOutdated(registry, kind);
-    const items: SelectItem<string>[] = [
-        ...(outdated ? [{ value: "relaunch", key: "relaunch", label: sessionMode ? "Update launch command" : "Update launch commands", hint: `start ${PACKAGE_NAME} ${installed!.version}` }] : []),
-        ...(installed && !sessionMode ? [{ value: "catalog", key: "catalog", label: `Group into ${sessionName(kind)}`, hint: "one entry in each AI service" }] : []),
-        ...(sessionMode && (installed || registry.read().sessions?.[kind]) ? [{ value: "individual", key: "individual", label: "List each connection separately", hint: "copies settings and passwords into each AI service" }] : []),
-        { value: "back", key: "b", label: "Back" },
-    ];
-    const picked = await prompter.select(KIND_LABELS[kind], items, { cancelValue: "back" });
-    if(picked === "back") return;
-    if(picked === "relaunch" && !sessionMode) { await applyLaunchCommands(prompter, registry, kind); return; }
-    await applyEntries(prompter, registry, kind, picked === "individual" ? "individual" : "catalog");
-}
-
-/** Per-connection entries: repoint standard launches at the installed runtime. */
-async function applyLaunchCommands(prompter: RegistrationPrompter, registry: Registry, kind: McpKind): Promise<void> {
-    const paint = prompter.paint;
-    const plan = registry.planRuntime(kind);
-    prompter.clearScreen();
-    prompter.write(`${paint.bold("Update launch commands")}  ${KIND_LABELS[kind]}\n`);
-    prompter.write(`  ${paint.dim("Start")}      ${PACKAGE_NAME} ${paint.accent(plan.runtime.version)}\n`);
-    prompter.write(`  ${paint.dim("Entries")}    ${paint.accent(String(plan.names.length))}  ${paint.dim(plan.names.map(plainText).join(", "))}\n`);
-    if(plan.skipped.length) prompter.write(`  ${paint.dim("Kept")}       ${plan.skipped.map(plainText).join(", ")} ${paint.dim("· custom commands")}\n`);
-    prompter.write(paint.dim("Connection values and credentials stay the same.\n"));
-    if(!await prompter.askYesNo("Apply these launch commands?", true)) return;
-    const results = registry.applyRuntime(plan);
+    prompter.write(`${paint.bold("Update launch commands")}\n`);
+    for(const kind of kinds) prompter.write(`  ${paint.dim(sessionName(kind).padEnd(10))}${paint.accent(plainText(registry.sessionEntry(kind).args[0]))} --catalog\n`);
+    prompter.write(paint.dim("Only the command that starts each entry changes; connection settings stay in the catalog.\n"));
+    if(!await prompter.askYesNo("Update these entries?", true)) return;
+    const results: SyncResult[] = [];
+    for(const kind of kinds) results.push(...registry.applySession(registry.planSession(kind, "catalog")));
     prompter.clearScreen();
     prompter.write(`${registry.formatResults(results, "Launch commands saved.", prompter.paint)}\n`);
-    await registry.checkSaved(prompter, plan.names);
+    const connections = registry.read().connections;
+    await registry.checkSaved(prompter, connectionNames(registry).filter(name => kinds.includes(connections[name].kind)));
     prompter.write("Restart or reconnect your AI clients to use them.\n");
-    await prompter.acknowledge();
-}
-
-/** Review and apply grouped entries (catalog) or one entry per connection (individual). */
-async function applyEntries(prompter: RegistrationPrompter, registry: Registry, kind: McpKind, mode: "catalog" | "individual"): Promise<void> {
-    const paint = prompter.paint;
-    const plan = registry.planSession(kind, mode);
-    prompter.clearScreen();
-    prompter.write(`${paint.bold(mode === "catalog" ? `Group ${KIND_LABELS[kind]} connections into ${sessionName(kind)}` : `List ${KIND_LABELS[kind]} connections separately`)}\n`);
-    for(const change of plan.changes) {
-        const add = change.add.length ? change.add.join(", ") : "nothing";
-        const remove = change.remove.length ? change.remove.length > 3 ? `${change.remove.length} entries` : change.remove.join(", ") : "nothing";
-        prompter.write(`  ${paint.dim(CLIENT_LABELS[change.client].padEnd(15))}${paint.accent(plainText(add))} ${paint.dim("· then remove")} ${plainText(remove)}\n`);
-        if(change.review.length) prompter.write(`  ${" ".repeat(15)}${paint.warning(`kept for Sync review: ${change.review.map(plainText).join(", ")}`)}\n`);
-    }
-    if(mode === "catalog") {
-        prompter.write(`  ${paint.dim("Runs".padEnd(15))}${plainText(plan.entry.args[0])} --catalog\n`);
-        if(plan.custom.length) prompter.write(`  ${paint.dim("Not started".padEnd(15))}${plan.custom.map(plainText).join(", ")} ${paint.dim("· custom commands, kept for switching back")}\n`);
-        prompter.write(paint.dim(`The ${sessionName(kind)} entry holds no passwords; they stay in the catalog.\n`));
-    } else prompter.write(paint.warning("! Passwords are copied back into each AI service's settings.\n"));
-    prompter.write(paint.dim("The previous catalog is kept as registry.previous.json.\n"));
-    if(!await prompter.askYesNo("Apply this change?", false)) return;
-    const results = registry.applySession(plan);
-    prompter.clearScreen();
-    prompter.write(`${registry.formatResults(results, "Saved.", prompter.paint)}\n`);
-    await registry.checkSaved(prompter, plan.names);
-    prompter.write("Restart or reconnect your AI clients to load the new entries. Fix startup failures first.\n");
     await prompter.acknowledge();
 }

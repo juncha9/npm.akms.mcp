@@ -38,7 +38,7 @@ export interface SessionPlan {
 export interface MigrationPlan {
     expected: string;
     steps: { id: string; label: string }[];
-    kinds: { kind: McpKind; status: "convert" | "catalog" | "individual" | "pending-runtime" | "empty" | "blocked"; names: string[]; session?: SessionPlan; changes?: SessionPlan["changes"]; detail?: string }[];
+    kinds: { kind: McpKind; status: "convert" | "catalog" | "pending-runtime" | "empty" | "blocked"; names: string[]; session?: SessionPlan; changes?: SessionPlan["changes"]; detail?: string }[];
     /** Saved entries still starting a separate per-kind package; ready when @akms/mcp is installed. */
     launches: { kind: McpKind; names: string[]; ready: boolean }[];
 }
@@ -52,7 +52,10 @@ function legacyLaunches(state: RegistryState): { kind: McpKind; names: string[] 
 // Keep steps ordered as new registry formats are introduced.
 const MIGRATION_STEPS = [
     { id: "v1_to_v2", label: "Upgrade registry version 1 to version 2", needed: (state: RegistryState) => state.version === 1 },
-    { id: "catalog_default", label: "Record catalog mode as the default for new kinds", needed: (state: RegistryState) => state.defaultMode === undefined },
+    { id: "catalog_default", label: "Make one entry per kind the default", needed: (state: RegistryState) => state.defaultMode === undefined },
+    // Every kind is grouped: one akms_<kind> entry per AI service. Per-connection entries are a 0.2 layout to convert, not a choice.
+    { id: "group_all", label: "Group every kind's connections into one akms_<kind> entry", needed: (state: RegistryState) => state.version === 2
+        && (state.defaultMode === "individual" || Object.values(state.sessions ?? {}).some(session => session?.mode === "individual")) },
     { id: "single_package", label: "Start servers from @akms/mcp instead of the separate per-kind packages", needed: (state: RegistryState) => legacyLaunches(state).length > 0 },
 ];
 export interface SyncResult {
@@ -70,13 +73,6 @@ export interface RegistrationPlan {
     imports: ImportCandidate[];
     conflicts: string[];
     errors: string[];
-}
-export interface RuntimePlan {
-    kind: McpKind;
-    runtime: GlobalRuntime;
-    names: string[];
-    skipped: string[];
-    expected: string;
 }
 
 const own = (value: object, key: string) => Object.hasOwn(value, key);
@@ -174,11 +170,10 @@ export class Registry {
         const state = this.read();
         const steps = MIGRATION_STEPS.filter(step => step.needed(state)).map(({ id, label }) => ({ id, label }));
         const launches = legacyLaunches(state).map(item => ({ ...item, ready: this.globalRuntime(item.kind) != null }));
-        // The session layout is reviewed per kind only while a format step changes it.
-        const layoutChanges = steps.some(step => step.id === "v1_to_v2" || step.id === "catalog_default");
+        // Each kind is reviewed only while a step changes how its connections are listed.
+        const layoutChanges = steps.some(step => step.id === "v1_to_v2" || step.id === "catalog_default" || step.id === "group_all");
         const kinds: MigrationPlan["kinds"] = layoutChanges ? KINDS.map(kind => {
             const names = Object.entries(state.connections).filter(([, item]) => item.kind === kind && item.entry).map(([name]) => name);
-            if(state.sessions?.[kind]?.mode === "individual") return { kind, names, status: "individual" };
             if(this.isSessionMode(kind, state)) return { kind, names, status: "catalog" };
             if(!names.length) return { kind, names, status: "empty" };
             try {
@@ -219,6 +214,12 @@ export class Registry {
             for(const step of plan.steps) {
                 if(step.id === "v1_to_v2") { state.version = 2; state.sessions ??= {}; }
                 else if(step.id === "catalog_default") state.defaultMode = "catalog";
+                else if(step.id === "group_all") {
+                    // Converted kinds are already grouped above; a kind waiting for the runtime or without
+                    // connections drops its per-connection choice and follows the grouped default.
+                    state.defaultMode = "catalog";
+                    for(const kind of KINDS) if(state.sessions?.[kind]?.mode === "individual") delete state.sessions[kind];
+                }
                 else if(step.id === "single_package") {
                     // Kinds without the runtime keep their entries; the step stays offered until it is installed.
                     for(const item of plan.launches) {
@@ -240,20 +241,6 @@ export class Registry {
             ...plan.kinds.filter(item => item.status === "convert" || item.status === "pending-runtime").map(item => item.kind),
             ...plan.launches.filter(item => item.ready).map(item => item.kind),
         ])]);
-    }
-
-    setDefaultMode(mode: "catalog" | "individual"): SyncResult[] {
-        return this.change(state => {
-            if(state.version !== 2 || state.defaultMode === undefined) throw new RegistryError("Migrate registry before changing the default for new kinds.");
-            if(state.defaultMode === mode) return;
-            // Freeze existing implicit choices before changing the future-kind default.
-            for(const kind of KINDS) if(!state.sessions?.[kind] && Object.values(state.connections).some(item => item.kind === kind && item.entry)) {
-                if(!this.globalRuntime(kind)) throw new RegistryError("Set up the pending runtimes and run Sync before changing the default for new kinds.");
-                state.sessions ??= {};
-                state.sessions[kind] = { mode: this.isSessionMode(kind, state) ? "catalog" : "individual", entry: this.sessionEntry(kind), applied: {} };
-            }
-            state.defaultMode = mode;
-        }, []);
     }
 
     kindForName(name: string, state = this.read()): McpKind | undefined {
@@ -345,36 +332,6 @@ export class Registry {
         const runtime = this.globalRuntime(kind);
         if(!runtime) throw new RegistryError(`Install the AKMS runtime first: ${runtimeInstallCommand()}. Then reopen Runtime.`);
         return runtime;
-    }
-
-    private runtimeSnapshot(state: RegistryState, kind: McpKind): string {
-        return JSON.stringify([state.clients, Object.entries(state.connections).filter(([, item]) => item.kind === kind)
-            .map(([name, item]) => [name, item.entry ? entryHash(item.entry) : null]).sort(([a], [b]) => String(a).localeCompare(String(b)))]);
-    }
-
-    planRuntime(kind: McpKind): RuntimePlan {
-        const state = this.read();
-        const runtime = this.requireRuntime(kind);
-        const names: string[] = [], skipped: string[] = [];
-        for(const [name, item] of Object.entries(state.connections)) {
-            if(item.kind !== kind || !item.entry) continue;
-            if(!standardLaunch(item.entry, kind)) { skipped.push(name); continue; }
-            if(item.entry.command !== runtime.command || JSON.stringify(item.entry.args) !== JSON.stringify(runtime.args)) names.push(name);
-        }
-        return { kind, runtime, names, skipped, expected: this.runtimeSnapshot(state, kind) };
-    }
-
-    applyRuntime(plan: RuntimePlan): SyncResult[] {
-        return this.change((state) => {
-            if(this.runtimeSnapshot(state, plan.kind) !== plan.expected) throw new RegistryError("Connections or registration changed since review. Reopen Runtime before applying.");
-            const runtime = this.requireRuntime(plan.kind);
-            if(JSON.stringify(runtime) !== JSON.stringify(plan.runtime)) throw new RegistryError("The global installation changed since review. Reopen Runtime before applying.");
-            for(const name of plan.names) {
-                const item = state.connections[name];
-                if(!item?.entry || item.kind !== plan.kind || !standardLaunch(item.entry, plan.kind)) throw new RegistryError("This connection has a custom launch command. Review it individually.");
-                item.entry = { ...item.entry, command: runtime.command, args: [...runtime.args] };
-            }
-        });
     }
 
     read(): RegistryState {

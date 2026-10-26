@@ -42,7 +42,7 @@ function writePlan(prompter: RegistrationPrompter, registry: Registry, plan: Mig
         prompter.write(`  ${paint.dim(pair.label.padEnd(10))}${paint.warning(plainText(pair.from))} ${paint.dim("→")} ${paint.bold(paint.success(plainText(pair.to)))}\n`);
     }
     plan.steps.forEach((step, index) => prompter.write(`  ${paint.accent(`${index + 1}.`)} ${step.label}\n`));
-    if(plan.steps.some(step => step.id === "catalog_default")) prompter.write(paint.dim("  New kinds start as one server per kind; a kind switched back to per-connection entries keeps that choice.\n"));
+    if(plan.kinds.length) prompter.write(paint.dim("  Every kind is listed as one akms_<kind> entry in each AI service; connection settings stay in the catalog.\n"));
     prompter.write("\n");
     for(const item of plan.launches) {
         const names = item.names.length > 3 ? `${item.names.length} entries` : item.names.map(plainText).join(", ");
@@ -50,7 +50,7 @@ function writePlan(prompter: RegistrationPrompter, registry: Registry, plan: Mig
     }
     for(const item of plan.kinds) {
         const target = sessionName(item.kind);
-        const action = item.status === "catalog" ? `already ${target}` : item.status === "individual" ? "keeps per-connection entries (your choice)"
+        const action = item.status === "catalog" ? `already ${target}`
             : item.status === "empty" ? `no connections · new ones use ${target}` : item.status === "blocked" ? paint.error("blocked")
             : `${item.names.length} entries → ${target}${item.status === "pending-runtime" ? paint.warning("  after Runtime + Sync") : ""}`;
         prompter.write(`  ${paint.dim(KIND_LABELS[item.kind].padEnd(10))}${action}\n`);
@@ -60,7 +60,7 @@ function writePlan(prompter: RegistrationPrompter, registry: Registry, plan: Mig
             prompter.write(`  ${" ".repeat(10)}${paint.dim(CLIENT_LABELS[change.client].padEnd(15))}${paint.accent(change.add.join(", ") || "nothing")} ${paint.dim("· then remove")} ${plainText(remove)}\n`);
             if(change.review.length) prompter.write(`  ${" ".repeat(25)}${paint.warning(`kept for Sync review: ${change.review.map(plainText).join(", ")}`)}\n`);
         }
-        if(item.session?.custom.length) prompter.write(`  ${" ".repeat(10)}${paint.dim(`custom commands kept for switching back: ${item.session.custom.map(plainText).join(", ")}`)}\n`);
+        if(item.session?.custom.length) prompter.write(`  ${" ".repeat(10)}${paint.dim(`custom commands are not started; their settings still load in the grouped entry: ${item.session.custom.map(plainText).join(", ")}`)}\n`);
     }
     prompter.write(paint.dim("\nServer entries hold no passwords; they stay in the catalog. The previous catalog is kept as registry.previous.json.\n"));
 }
@@ -100,7 +100,7 @@ export async function migrationMenu(prompter: RegistrationPrompter, registry: Re
         const state = registry.read();
         const launchKinds = plan.launches.filter(item => item.ready).map(item => item.kind);
         await registry.checkSaved(prompter, [...new Set([
-            ...plan.kinds.filter(item => item.status !== "individual").flatMap(item => item.names),
+            ...plan.kinds.flatMap(item => item.names),
             ...Object.entries(state.connections).filter(([, item]) => item.entry && launchKinds.includes(item.kind)).map(([name]) => name),
         ])]);
         if(plan.launches.some(item => !item.ready)) prompter.write(paint.warning(`! Entries waiting for ${PACKAGE_NAME} keep their old launch. Install it from Runtime, then reopen Migrate registry.\n`));

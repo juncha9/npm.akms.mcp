@@ -54,45 +54,25 @@ describe("globally installed direct runtime", () => {
         expect(entryKind({ ...runtime, env: {} })).toBe("db");
     });
 
-    it("converts all standard launches in one review, preserving secrets and custom commands", async () => {
+    it("offers Update launch commands only when a grouped entry no longer starts the installed runtime", async () => {
         const { registry, targets, runtime } = fixture();
+        fs.writeFileSync(registry.file, JSON.stringify({ version: 2, defaultMode: "catalog", clients: [], connections: {}, sessions: {} }));
         registry.register(["cursor", "claude-desktop"]);
-        registry.write("db", "first", legacy());
-        registry.write("db", "second", legacy());
-        const custom = { ...legacy(), args: [...legacy().args, "--custom-argument"] };
-        registry.write("db", "custom", custom);
-        const text = await screen(["layout", "db", "relaunch", "y", "b", "b"], (prompter) => runtimeMenu(prompter, registry));
-        expect(text).toContain("launch out of date");
-        expect(text).toContain("Update launch commands");
-        expect(text).toContain("first, second");
-        expect(registry.runtimeOptions.check).toHaveBeenCalledTimes(1);
-        expect(text).toContain("OK first: fixture@1.2.3");
-        expect(text).toContain("OK second:");
-        expect(text).toContain("custom");
+        // Not a 0.3 launch, so no migration is pending and only the moved Node matters.
+        registry.write("db", "first", { command: "akms-mcp-db", args: [], env: legacy().env });
+        expect(targets[0].readEntries().akms_db.command).toBe(runtime.command);
+        expect(await screen(["b"], (prompter) => runtimeMenu(prompter, registry))).not.toContain("Update launch commands");
+        // Node moved: the saved akms_db entry still names the old executable.
+        const moved = { ...runtime, command: path.join(directory, "new-node", "node.exe") };
+        registry.runtimeOptions.find = () => moved;
+        registry.runtimeOptions.check = vi.fn(async () => ({ ok: true, server: "fixture", version: "1.2.3", tools: 2, toolNames: ["first__db_query", "db_catalog_status"], exitCode: 0, stderr: [] }));
+        const text = await screen(["relaunch", "y", "b"], (prompter) => runtimeMenu(prompter, registry));
+        expect(text).toContain("Update launch commands  akms_db  out of date");
+        expect(text).toContain("Update these entries? (Y/n)");
+        expect(text).toContain("OK akms_db: fixture@1.2.3");
         expect(text).not.toContain("test-secret");
-        for(const target of targets) {
-            expect(target.readEntries().first).toEqual({ command: runtime.command, args: runtime.args, env: legacy().env });
-            expect(target.readEntries().second.env).toEqual(legacy().env);
-            expect(target.readEntries().custom).toEqual(custom);
-        }
-        expect(registry.planRuntime("db").names).toEqual([]);
-        const form = registry.target("db"); form.readEntries();
-        form.writeEntry("first", legacy());
-        expect(targets[0].readEntries().first.command).toBe(process.execPath);
-    });
-
-    it("keeps an externally edited client untouched and rejects stale runtime reviews", () => {
-        const { registry, targets } = fixture();
-        registry.register(["cursor", "claude-desktop"]);
-        registry.write("db", "first", legacy());
-        const plan = registry.planRuntime("db");
-        targets[1].writeEntry("first", { ...legacy(), env: { ...legacy().env, DB_HOST: "external.local" } });
-        const results = registry.applyRuntime(plan);
-        expect(results.map((result) => result.status)).toEqual(["synced", "conflict"]);
-        expect(targets[1].readEntries().first.command).toBe("cmd");
-        const next = registry.planRuntime("db");
-        registry.write("db", "new", legacy());
-        expect(() => registry.applyRuntime(next)).toThrow(/changed since review/);
+        for(const target of targets) expect(target.readEntries().akms_db).toMatchObject({ command: moved.command, args: [...runtime.args, "--catalog"] });
+        expect(await screen(["b"], (prompter) => runtimeMenu(prompter, registry))).not.toContain("Update launch commands");
     });
 
     it("installs only when missing and never silently falls back to npx", async () => {

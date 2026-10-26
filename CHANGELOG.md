@@ -7,8 +7,9 @@ All notable changes to `@akms/mcp`.
 ### Changed
 
 - Prepare 0.4.0 as one `@akms/mcp` package containing setup and the Database, SSH, WSL and S3 servers. The only command is `akms-mcp`; server entries use `lib/db.js`, `lib/ssh.js`, `lib/wsl.js` and `lib/s3.js`.
-- Add a reviewed Migrate registry step that moves old direct paths and standard npx entries to `@akms/mcp`. Entries using an old kind-specific command are updated from AI service entries. Preserve launches waiting for the unified runtime; keep registry version 2 and existing layout choices.
-- Combine installation, updates and migration in Runtime, with per-kind choices under AI service entries (grouped or one per connection). Show migration only when it can apply and display old/new package versions. Offer removal of unused legacy packages after checking client references; removal defaults to No.
+- Add a reviewed Migrate registry step that moves old direct paths and standard npx entries to `@akms/mcp`. Preserve launches waiting for the unified runtime; keep registry version 2.
+- Group every kind: each AI service gets one `akms_<kind>` entry per kind. Remove the per-connection layout and the switch between layouts; Migrate registry groups kinds an older setup listed one entry per connection, and a per-connection default.
+- Combine installation, updates and migration in Runtime. Show migration only when it can apply and display old/new package versions, list the upgrade steps while one is unfinished, offer **Update launch commands** only when a grouped entry no longer starts the installed runtime, and offer removal of unused legacy packages after checking client references; removal defaults to No.
 - Each kind's screen lists only its connections; Register, Sync and Runtime are in the main menu, which marks Runtime when an update or registry migration is available.
 - Consolidate user installation, security and upgrade guidance in README, with kind-specific configuration and tool guides under `docs/`.
 - Plan deprecation of the separate `@akms/mcp-db`, `@akms/mcp-ssh`, `@akms/mcp-wsl` and `@akms/mcp-s3` packages after 0.4.0 is published. Existing legacy entries remain migration sources.

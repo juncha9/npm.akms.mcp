@@ -16,7 +16,7 @@ let directory: string;
 beforeEach(() => {
     directory = fs.mkdtempSync(path.join(os.tmpdir(), "akms updates "));
     vi.stubEnv("AKMS_MCP_HOME", directory);
-    fs.writeFileSync(path.join(directory, "registry.json"), JSON.stringify({ version: 2, defaultMode: "individual", clients: [], connections: {}, sessions: {} }));
+    fs.writeFileSync(path.join(directory, "registry.json"), JSON.stringify({ version: 2, defaultMode: "catalog", clients: [], connections: {}, sessions: {} }));
 });
 afterEach(async () => {
     vi.unstubAllEnvs();
@@ -35,7 +35,7 @@ function fixture(version: string | null = "1.0.0", linked = false) {
     const find = vi.fn((kind: McpKind): GlobalRuntime | null => installed && { command: process.execPath, args: [path.join(directory, "node_modules", "@akms", "mcp", "lib", `${kind}.js`)], ...installed });
     const latest = vi.fn(async (): Promise<string | null> => "2.0.0");
     const install = vi.fn(async () => { installed = { version: "2.0.0", linked: false }; });
-    const check = vi.fn(async () => ({ ok: true, server: "fixture", version: "2.0.0", tools: 3, exitCode: 0, stderr: [] }));
+    const check = vi.fn(async () => ({ ok: true, server: "fixture", version: "2.0.0", tools: 3, toolNames: ["db-one__db_query", "db-two__db_query", "ssh-one__ssh_exec"], exitCode: 0, stderr: [] }));
     const options = { find, latest, install, check, legacy: () => [] };
     const registry = new Registry([], path.join(directory, "registry.json"), options);
     registry.register(["cursor"]);
@@ -79,14 +79,14 @@ describe("Runtime updates", () => {
         expect(text).not.toContain("Check for updates");
         expect(text).not.toContain("Update to");
     });
-    it("updates once, checks each distinct saved entry once and leaves the catalog unchanged", async () => {
+    it("updates once, checks each grouped entry once and leaves the catalog unchanged", async () => {
         const values = fixture(); const before = fs.readFileSync(values.registry.file, "utf8");
         const text = await screen(["check", "update", "b"], values.registry);
         expect(values.install).toHaveBeenCalledExactlyOnceWith();
         expect(values.latest).toHaveBeenCalledTimes(1);
         expect(values.check).toHaveBeenCalledTimes(2);
         expect(text).toContain("Installed @akms/mcp 2.0.0");
-        expect(text).toContain("OK db-one: fixture@2.0.0, 3 tools");
+        expect(text).toContain("OK akms_db: fixture@2.0.0, 3 tools");
         expect(text).toContain("Reconnect or restart");
         expect(fs.readFileSync(values.registry.file, "utf8")).toBe(before);
     });

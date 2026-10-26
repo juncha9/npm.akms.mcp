@@ -156,7 +156,7 @@ export async function registrationMenu(prompter: RegistrationPrompter, registry:
             if(plan.errors.length) writeField(prompter, "Unavailable", countLabel(plan.errors.length, "service"), plan.errors.join(" "), "error");
             if(initial.defaultMode === "catalog") {
                 if(plan.imports.some(item => !registry.globalRuntime(item.kind))) writeField(prompter, "Runtime", "Waiting", "install from Runtime, then Sync; existing entries stay", "warning");
-                if(plan.imports.some(item => !standardLaunch(item.entry, item.kind))) writeHint(prompter, "Custom commands stay in the catalog for switching back; session servers use their saved settings.");
+                if(plan.imports.some(item => !standardLaunch(item.entry, item.kind))) writeHint(prompter, "Custom commands are not started; the grouped entry loads their saved settings.");
             }
             if(removed.length) writeField(prompter, "Unregister", removed.map((id) => CLIENT_LABELS[id]).join(" · "), "remove managed entries; keep the catalog");
             if(!privacyNoticeShown) {

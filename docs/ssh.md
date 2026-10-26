@@ -10,7 +10,7 @@ Follow [Install and set up](../README.md#install-and-set-up), then open SSH from
 npx -y @akms/mcp@latest ssh
 ```
 
-Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Runtime contains installation, migration and AI service entries (grouped or one per connection). This kind's screen manages its saved connections. See the shared [upgrade guide](../README.md#upgrading-from-03x-to-040), [AI service entries](../README.md#ai-service-entries) and [catalog security](../README.md#catalog-security-and-recovery).
+Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Runtime contains installation, updates and migration. Connections are grouped into one `akms_<kind>` entry in each AI service. This kind's screen manages its saved connections. See the shared [upgrade guide](../README.md#upgrading-from-03x-to-040), [how connections appear](../README.md#how-connections-appear-in-ai-services) and [catalog security](../README.md#catalog-security-and-recovery).
 
 In 0.3.x and earlier this server was distributed as `@akms/mcp-ssh` with an `akms-mcp-ssh` command. Version 0.4.0 uses `@akms/mcp` and the single `akms-mcp` command.
 

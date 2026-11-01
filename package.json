@@ -1,6 +1,6 @@
 {
     "name": "@akms/mcp",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "MCP servers that let an AI agent work with databases, SSH hosts, WSL distros and S3 buckets — one package, one setup menu, one shared connection catalog.",
     "keywords": [
         "mcp",

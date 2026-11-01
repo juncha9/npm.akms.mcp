@@ -47,7 +47,7 @@ describe("loadHostProfile", () => {
     it("maps every variable", () => {
         clearEnv();
         process.env.WSL_DISTRO = "ubuntu";
-        process.env.WSL_USER = "zinnalab";
+        process.env.WSL_USER = "developer";
         process.env.WSL_NAME = "lab";
         process.env.WSL_DESCRIPTION = "test stack";
         process.env.WSL_CWD = "/home/app";
@@ -62,7 +62,7 @@ describe("loadHostProfile", () => {
         process.env.WSL_MAX_READ_BYTES = "20";
 
         const profile = loadHostProfile()!;
-        expect(profile.username).toBe("zinnalab");
+        expect(profile.username).toBe("developer");
         expect(profile.name).toBe("lab");
         expect(profile.description).toBe("test stack");
         expect(profile.defaultCwd).toBe("/home/app");

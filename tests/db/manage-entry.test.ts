@@ -21,7 +21,7 @@ afterEach(async () => {
 
 function createAnswers(overrides?: Partial<DbSetupAnswers>): DbSetupAnswers {
     return {
-        name: "pg_akms",
+        name: "pg_main",
         driver: "postgres",
         host: "10.0.0.5",
         port: 5432,
@@ -183,7 +183,7 @@ describe("entryToAnswers — pre-filling an edit", () => {
             extraEnv: { DB_ALIAS: "prod", DB_STATEMENT_TIMEOUT_MS: "5000" },
         }));
 
-        const answers = entryToAnswers("pg_akms", original);
+        const answers = entryToAnswers("pg_main", original);
         const rewritten = answersToEntry(answers);
 
         expect(rewritten.env).toEqual(original.env);
@@ -208,7 +208,7 @@ describe("entryToAnswers — pre-filling an edit", () => {
     });
 
     it("reads a hand-written boolean spelling", () => {
-        const answers = entryToAnswers("pg_akms", {
+        const answers = entryToAnswers("pg_main", {
             command: "npx",
             args: ["-y", "@akms/mcp-db"],
             env: { DB_DRIVER: "postgres", DB_HOST: "h", DB_NAME: "d", DB_USER: "u", DB_READONLY: "yes", DB_ALLOW_DDL: "0" },

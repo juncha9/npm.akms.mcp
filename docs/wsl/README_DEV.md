@@ -17,7 +17,7 @@ Release in this order:
 
 The guard never commits, installs dependencies or publishes. `npm pack --dry-run` inspects contents without invoking this publish-only gate.
 
-Sibling of [`@akms/mcp-ssh`](https://github.com/alkemic-studio/npm.akms.mcp-ssh) — same layout, same build, same tool surface with `ssh_` → `wsl_`.
+Sibling of [`@akms/mcp-ssh`](https://github.com/juncha9/npm.akms.mcp-ssh) — same layout, same build, same tool surface with `ssh_` → `wsl_`.
 
 ## 🧑‍💻 Commands
 

@@ -218,7 +218,7 @@ All notable changes to `@akms/mcp-wsl`. Dates are `YYYY-MM-DD`.
 
 ## 0.0.1 — 2026-09-28
 
-Initial implementation. Design record: `akms.docs/mcp-wsl-design.md`.
+Initial implementation.
 
 - One server entry fronts one distro **and one user** (`WSL_DISTRO` + `WSL_USER`), declared
   as plain `WSL_*` variables — the `SSH_*` surface of `@akms/mcp-ssh` with the connection

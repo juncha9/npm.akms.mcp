@@ -8,12 +8,12 @@ describe("loadDbProfile", () => {
     });
 
     it("reads the split variables with defaults", () => {
-        const profile = loadDbProfile({ DB_DRIVER: "postgres", DB_HOST: "db.local", DB_NAME: "akms", DB_USER: "app_user" });
+        const profile = loadDbProfile({ DB_DRIVER: "postgres", DB_HOST: "db.local", DB_NAME: "app", DB_USER: "app_user" });
         expect(profile).toMatchObject({
-            name: "akms@db.local",
+            name: "app@db.local",
             host: "db.local",
             port: 5432,
-            database: "akms",
+            database: "app",
             user: "app_user",
             ssl: "require",
             tunnel: null,
@@ -182,7 +182,7 @@ describe("loadDbProfile", () => {
     });
 
     it("builds the tunnel, and refuses tunnel details without its host", () => {
-        const base = { DB_DRIVER: "postgres", DB_HOST: "ak-pg.rds.amazonaws.com", DB_PORT: "15432", DB_NAME: "akms", DB_USER: "app_user" };
+        const base = { DB_DRIVER: "postgres", DB_HOST: "db.example.com", DB_PORT: "15432", DB_NAME: "app", DB_USER: "app_user" };
         const profile = loadDbProfile({ ...base, DB_SSH_HOST: "203.0.113.5", DB_SSH_PORT: "20022", DB_SSH_USER: "ubuntu", DB_SSH_PASSWORD: "x" });
         expect(profile?.tunnel).toMatchObject({ host: "203.0.113.5", port: 20022, username: "ubuntu", password: "x" });
         expect(profile?.ssl).toBe("require");

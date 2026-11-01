@@ -17,13 +17,13 @@
         "akms"
     ],
     "license": "MIT",
-    "homepage": "https://github.com/juncha9/npm.akms.mcp#readme",
+    "homepage": "https://github.com/alkemic-studio/npm.akms.mcp#readme",
     "bugs": {
-        "url": "https://github.com/juncha9/npm.akms.mcp/issues"
+        "url": "https://github.com/alkemic-studio/npm.akms.mcp/issues"
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/juncha9/npm.akms.mcp.git"
+        "url": "git+https://github.com/alkemic-studio/npm.akms.mcp.git"
     },
     "type": "module",
     "bin": {

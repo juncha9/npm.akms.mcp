@@ -2,6 +2,12 @@
 
 All notable changes to `@akms/mcp`.
 
+## [0.5.1] - 2026-11-02
+
+### Changed
+
+- Point the package's repository, homepage and issue links to `alkemic-studio/npm.akms.mcp`. The code is the same as 0.5.0.
+
 ## [0.5.0] - 2026-11-02
 
 ### Added

@@ -1,10 +1,23 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { runtimeRoot } from "@/modules/registration/runtime";
+import { removeTempDirectory } from "../support/remove-temp-directory";
 import type { DbSetupAnswers } from "@db/_types";
 import { answersToEntry, entryToAnswers, isOurEntry, summarizeEntry } from "@db/modules/manage/entry";
 import { loadDbProfile } from "@db/modules/profile";
+
+let runtimeDirectory: string;
+beforeEach(() => {
+    runtimeDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "akms-entry-runtime-"));
+    vi.spyOn(os, "homedir").mockReturnValue(runtimeDirectory);
+    vi.stubEnv("AKMS_MCP_HOME", runtimeDirectory);
+});
+afterEach(async () => {
+    vi.restoreAllMocks(); vi.unstubAllEnvs();
+    await removeTempDirectory(runtimeDirectory, "akms-entry-runtime-");
+});
 
 function createAnswers(overrides?: Partial<DbSetupAnswers>): DbSetupAnswers {
     return {
@@ -30,16 +43,22 @@ describe("answersToEntry — what gets written", () => {
         expect(entry.env).toEqual({ DB_DRIVER: "postgres", DB_HOST: "10.0.0.5", DB_NAME: "akms", DB_USER: "app_user" });
     });
 
-    it("creates a direct installed launch without npx", () => {
+    it("uses the fallback command when the isolated runtime is missing", () => {
         const entry = answersToEntry(createAnswers());
-        expect(entry.command).not.toBe("npx");
-        expect(entry.command).not.toBe("cmd");
-        expect(entry.args).not.toContain("npx");
+        expect(entry.command).toBe("akms-mcp-db");
+        expect(entry.args).toEqual([]);
         expect(isOurEntry(entry)).toBe(true);
-        if(entry.args.length) {
-            expect(entry.command).toBe(process.execPath);
-            expect(entry.args[0].replace(/\\/g, "/")).toMatch(/node_modules\/@akms\/mcp-db\/lib\/cli\.js$/);
-        } else expect(entry.command).toBe("akms-mcp-db");
+    });
+
+    it("uses the merged package in the isolated runtime prefix without npx", () => {
+        const root = path.join(runtimeRoot(), "@akms", "mcp");
+        fs.mkdirSync(path.join(root, "lib"), { recursive: true });
+        fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "@akms/mcp", version: "0.5.0" }));
+        const script = path.join(root, "lib", "db.js"); fs.writeFileSync(script, "// fixture");
+        const entry = answersToEntry(createAnswers());
+        expect(entry.command).toBe(process.execPath);
+        expect(entry.args).toEqual([script]);
+        expect(isOurEntry(entry)).toBe(true);
     });
 
     it("writes every answered setting under its variable", () => {

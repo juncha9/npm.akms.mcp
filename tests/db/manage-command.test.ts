@@ -100,12 +100,15 @@ afterAll(async () => {
 
 beforeEach(() => {
     workDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-db-config-"));
+    vi.spyOn(os, "homedir").mockReturnValue(workDirectory);
+    fs.writeFileSync(path.join(workDirectory, "unused-key-fixture"), "Synthetic path fixture; authentication switches to a password before connecting.");
     configPath = path.join(workDirectory, "mcp.json");
     fs.writeFileSync(configPath, `${JSON.stringify(SEED_DOCUMENT, null, 2)}\n`);
     target = createJsonFileTarget({ id: "cursor", label: "Test client", filePath: configPath });
 });
 
 afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
     fs.rmSync(workDirectory, { recursive: true, force: true });
 });
@@ -237,6 +240,7 @@ describe("config — adding a database", () => {
             "user", "postgres",
             "ssl", "off",
             "route", "ssh", "127.0.0.1", "tester",   // choosing the route asks for the SSH host and user
+            path.join(workDirectory, "unused-key-fixture"), // empty HOME has no default key; password auth below replaces this path
             "ssh-port", String(sshPort),
             "ssh-auth", "password", "secret-pw",     // a switch to password asks for it right away
             "save",

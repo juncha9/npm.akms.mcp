@@ -33,6 +33,18 @@ The single `@akms/mcp` package owns the setup menu and shared registration code.
   previously managed by AKMS on that service. The shared catalog is retained.
 - Managed client entries use `--catalog` to read a startup snapshot without locks or writes. Setup groups each kind's connections into one process per AI client session, with connection-prefixed tools and lazy remote connections. Manual environment-based startup still serves one connection. Neither invocation runs registration or requires a management process to stay open.
 
+## Adding without the menu
+
+`akms-mcp add <kind> <name>` saves one new connection for scripts and AI agents. The shared flow is `src/modules/registration/add-command.ts`; each kind supplies its option list (`modules/manage/add-fields.ts`) and its server's parser.
+
+- Options are an allow-list. Settings that run local commands (`SSH_PROXY_COMMAND`), settings that would put a password on the command line (`DB_URL`) and custom launch commands have no option, and stay in the setup menu.
+- Secret options take no value. They read a hidden prompt on a terminal, otherwise one stdin line each in option order. Errors repeat only options from the list and never what was typed, because a mistyped command can hold a password, even one starting with `--`.
+- It only adds. The name is checked before any secret is requested and again under the catalog lock (`Registry.add`), so it cannot change an existing connection's settings or permissions, however long a prompt stays open. A name waiting for removal counts as taken, because reusing it would discard the pending deletion and its replacement.
+- Everything that can refuse runs before a secret is requested: a pending migration, no registered service, no runtime, an existing name. The server's own parser then checks the settings before anything is saved, and the startup check runs afterwards.
+- stdout carries one JSON object; prompts and the startup report go to stderr. `saved` turns true when the catalog commit returns, not when the command ends: clients are written and the catalog saved again afterwards, so a later step can fail with the connection already saved. The launcher starts its own `lib/<kind>.js add`, not the installed runtime's: an older runtime has no `add`, ignores the word and starts its MCP server on the same pipes.
+
+This is a command rather than an MCP tool on purpose. Servers stay startup-snapshot readers that never write the catalog or client settings. A kind's server exists only once it has a connection, so a tool could not add the first one. Tool arguments pass through the model, so a password would enter the conversation; MCP form elicitation may not collect passwords, and URL elicitation would need a separate local page. A registration tool would also sit in every session's tool list, within reach of a prompt injection, and could reach local command execution through a proxy command. An agent that can run this command already has a shell, so the command adds no new authority. The cost is that clients without a shell, such as Claude Desktop, have no way to use it.
+
 ## Dedicated server runtime
 
 New managed connections use the Node executable and the runtime package's

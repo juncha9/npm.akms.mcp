@@ -4,6 +4,10 @@ import type { CliArguments, ClientId, McpId } from "../../_types";
 export function parseArguments(argv: string[]): CliArguments {
     const parsed: CliArguments = { showHelp: false, showVersion: false };
     let commandSeen = false;
+    if(argv[0] === "add") {
+        parsed.addArguments = argv.slice(1);
+        return parsed;
+    }
 
     for(let index = 0; index < argv.length; index += 1) {
         const argument = argv[index];

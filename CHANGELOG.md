@@ -2,6 +2,13 @@
 
 All notable changes to `@akms/mcp`.
 
+## [0.5.0] - 2026-11-02
+
+### Added
+
+- `akms-mcp add <db|ssh|wsl|s3> <name>` saves a new connection without the menu, for scripts and AI agents with shell access. It prints one JSON object, checks the settings with the server's own parser before saving and runs the startup check afterwards.
+- Options are an allow-list per kind, new names only: existing connections cannot be changed, and settings such as SSH proxy commands stay in the menu. Secret options take no value on the command line; they read a hidden prompt or stdin.
+
 ## [0.4.0] - 2026-10-27
 
 ### Changed

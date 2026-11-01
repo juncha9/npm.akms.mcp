@@ -6,6 +6,9 @@ import { $logger } from "@db/_libs/logger";
 import { describeError } from "@db/_libs/text";
 import { runConfigCommand, runConnectionCheck } from "@db/modules/manage";
 import { loadDbProfile } from "@db/modules/profile";
+import { runAddCommand } from "@/modules/registration/add-command";
+import { ADD_DEFAULTS, ADD_FIELDS } from "@db/modules/manage/add-fields";
+import { Prompter } from "@db/modules/manage/prompter";
 import { createDbCatalogServer, createDbMcpServer } from "./server";
 
 const HELP_TEXT = [
@@ -17,6 +20,7 @@ const HELP_TEXT = [
     "  node db.js config [--target <client>]",
     "  node db.js register           Register AI services for all AKMS connections",
     "  node db.js sync               Review differences and retry pending changes",
+    "  node db.js add <name> [opts]  Save a new database without the menu; add --help lists the options",
     "  (lib/db.js of the installed @akms/mcp; the AKMS MCP menu: npx -y @akms/mcp@latest)",
     "",
     "Commands:",
@@ -126,6 +130,15 @@ async function runCheckCommand(profile: DbProfile | null): Promise<number> {
 
 async function main(): Promise<void> {
     const _logger = $logger.child({ context: "cli" });
+    if(process.argv[2] === "add") {
+        if(process.env[LOG_LEVEL_ENV] == null) process.env[LOG_LEVEL_ENV] = "warn";
+        process.exitCode = await runAddCommand({
+            kind: "db", argv: process.argv.slice(3), fields: ADD_FIELDS, defaults: ADD_DEFAULTS,
+            validate: loadDbProfile,
+            prompter: new Prompter(process.stdin, process.stderr), output: process.stdout,
+        });
+        return;
+    }
     const cliArguments = parseArguments(process.argv.slice(2));
     if(cliArguments.showHelp == true) {
         process.stderr.write(`${HELP_TEXT}\n`);

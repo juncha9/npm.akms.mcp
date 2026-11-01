@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArguments } from "./modules/launcher/arguments";
 import { runMenu, runRegistrationCommand } from "./modules/launcher/menu";
-import { launchMcp } from "./modules/launcher/npm";
+import { launchAdd, launchMcp } from "./modules/launcher/npm";
 import { PACKAGE_VERSION } from "./_defs";
 
 const HELP_TEXT = [
@@ -13,6 +13,8 @@ const HELP_TEXT = [
     "  akms-mcp [setup|config] <mcp>      Open db, ssh, wsl or s3 setup directly",
     "  akms-mcp register                  Register AI services for all AKMS connections",
     "  akms-mcp sync                      Review differences and retry pending changes",
+    "  akms-mcp add <mcp> <name> [opts]   Save a new connection without the menu, for scripts and AI agents;",
+    "                                     akms-mcp add <mcp> --help lists the options",
     "",
     "Options:",
     "  --target <client>                 claude-code | codex | claude-desktop | cursor",
@@ -26,6 +28,10 @@ const HELP_TEXT = [
 
 async function main(): Promise<void> {
     const argumentsList = parseArguments(process.argv.slice(2));
+    if(argumentsList.addArguments != null) {
+        process.exitCode = await launchAdd(argumentsList.addArguments);
+        return;
+    }
     if(argumentsList.showHelp == true) {
         process.stdout.write(`${HELP_TEXT}\n`);
         return;

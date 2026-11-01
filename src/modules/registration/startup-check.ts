@@ -146,8 +146,9 @@ export async function checkStartup(entry: McpServerEntry, timeoutMs = 10_000): P
     });
 }
 
-export async function checkConnections(prompter: RegistrationPrompter, entries: { name: string; entry: McpServerEntry; prefixes?: string[]; maskEntries?: McpServerEntry[] }[], check = checkStartup): Promise<void> {
-    if(!entries.length) return;
+/** Returns whether every checked server started and listed its connections' tools. */
+export async function checkConnections(prompter: RegistrationPrompter, entries: { name: string; entry: McpServerEntry; prefixes?: string[]; maskEntries?: McpServerEntry[] }[], check = checkStartup): Promise<boolean> {
+    if(!entries.length) return true;
     prompter.write("\nStartup check (initialize and tools/list only)\n");
     const checked = new Map<string, StartupResult>();
     let failed = false;
@@ -174,4 +175,5 @@ export async function checkConnections(prompter: RegistrationPrompter, entries: 
         }
     }
     if(failed) prompter.write("Settings remain saved. Fix failed startup checks before restarting or reconnecting your AI clients.\n");
+    return !failed;
 }

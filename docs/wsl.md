@@ -14,6 +14,18 @@ Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Run
 
 In 0.3.x and earlier this server was distributed as `@akms/mcp-wsl` with an `akms-mcp-wsl` command. Version 0.4.0 uses `@akms/mcp` and the single `akms-mcp` command.
 
+## Add from the command line
+
+With 0.5.0 or later on Windows, after registering an AI service and installing the runtime, add a distro connection without the setup menu:
+
+```sh
+akms-mcp add wsl example_linux --distro Ubuntu --user developer --readonly
+```
+
+Use a distro and user available on your machine. Writes are allowed unless `--readonly` is given; `--allow-windows` separately enables Windows interop. Run `akms-mcp add wsl --help` for the allowed options. Use the setup menu to edit, rename or remove saved connections. Advanced command policies, working directories and output limits are not exposed by `add`.
+
+The command accepts new names only and prints one JSON result. A saved connection can still report a failed startup check; read `saved`, `ok` and the exit code before reconnecting your AI client.
+
 ## Managed server entry
 
 Setup uses one grouped `akms_wsl` entry per AI client session. Setup writes a direct Node launch like this:

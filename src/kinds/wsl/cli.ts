@@ -5,6 +5,10 @@ import { LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS, SINGL
 import { $logger } from "@wsl/_libs";
 import type { WslHostProfile } from "@wsl/_types";
 import { runDistroCheck, runConfigCommand } from "@wsl/modules/manage";
+import { runAddCommand } from "@/modules/registration/add-command";
+import { loadHostProfile } from "@wsl/modules/config/host-profile";
+import { ADD_FIELDS } from "@wsl/modules/manage/add-fields";
+import { Prompter } from "@wsl/modules/manage/prompter";
 import { createWslCatalogServer, createWslMcpServer } from "@wsl/server";
 
 /** `@akms/mcp-ssh`'s guard logs through its own logger; keep the two thresholds aligned. */
@@ -76,6 +80,7 @@ const HELP_TEXT = [
     "  node wsl.js config [--target <client>]",
     "  node wsl.js register           Register AI services for all AKMS connections",
     "  node wsl.js sync               Review differences and retry pending changes",
+    "  node wsl.js add <name> [opts]  Save a new distro without the menu; add --help lists the options",
     "  (lib/wsl.js of the installed @akms/mcp; the AKMS MCP menu: npx -y @akms/mcp@latest)",
     "",
     "Commands:",
@@ -136,6 +141,17 @@ async function main(): Promise<void> {
     if (process.argv[2] === "setup") {
         process.stderr.write("The setup command has been removed. Use npx -y @akms/mcp@latest wsl.\n");
         process.exitCode = 1;
+        return;
+    }
+
+    if(process.argv[2] === "add") {
+        if(process.env[LOG_LEVEL_ENV] == null) process.env[LOG_LEVEL_ENV] = "silent";
+        if(process.env[SSH_LOG_LEVEL_ENV] == null) process.env[SSH_LOG_LEVEL_ENV] = process.env[LOG_LEVEL_ENV];
+        process.exitCode = await runAddCommand({
+            kind: "wsl", argv: process.argv.slice(3), fields: ADD_FIELDS,
+            validate: loadHostProfile,
+            prompter: new Prompter(process.stdin, process.stderr), output: process.stdout,
+        });
         return;
     }
 

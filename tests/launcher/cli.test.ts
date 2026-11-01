@@ -48,9 +48,9 @@ async function runCli(options: { argumentsList: string[]; input?: string; enviro
         windowsHide: true,
         stdio: "pipe",
     });
-    let output = "";
-    child.stdout.on("data", (chunk) => { output += String(chunk); });
-    child.stderr.on("data", (chunk) => { output += String(chunk); });
+    let output = "", stdout = "", stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += String(chunk); output += String(chunk); });
+    child.stderr.on("data", (chunk) => { stderr += String(chunk); output += String(chunk); });
     child.stdin.end(options.input ?? "");
     const code = await new Promise<number | null>((resolve, reject) => {
         child.once("error", reject);
@@ -62,10 +62,45 @@ async function runCli(options: { argumentsList: string[]; input?: string; enviro
         calls = content.trim().split("\n").map((line) => JSON.parse(line) as string[]);
     }
     const runtimeCalls = existsSync(runtimeRecord) ? (await readFile(runtimeRecord, "utf8")).trim().split("\n").map((line) => JSON.parse(line) as string[]) : [];
-    return { code, output, calls, runtimeCalls };
+    return { code, output, stdout, stderr, calls, runtimeCalls };
 }
 
 describe("built CLI process boundary", () => {
+    it.each([
+        { kind: "db", args: ["--host", "database.invalid", "--database", "example", "--user", "tester"] },
+        { kind: "ssh", args: ["--host", "host.invalid", "--user", "tester"] },
+        { kind: "wsl", args: ["--distro", "ExampleLinux"] },
+        { kind: "s3", args: ["--bucket", "example-bucket"] },
+    ])("routes add $kind to the bundled entry and returns JSON without launching the older installed entry", async ({ kind, args }) => {
+        const result = await runCli({ argumentsList: ["add", kind, "example", ...args] });
+        expect(result.code, result.output).toBe(1);
+        const json = JSON.parse(result.stdout);
+        expect(json).toMatchObject({ ok: false, saved: false });
+        if(kind === "wsl" && process.platform !== "win32") expect(json.error).toContain("Windows");
+        else {
+            expect(json.kind).toBe(kind);
+            expect(json.error).toContain("No AI service is registered");
+        }
+        expect(result.calls).toEqual([]);
+        expect(result.runtimeCalls).toEqual([]);
+    }, 20_000);
+
+    it("rejects an unknown add kind with one JSON error and no child", async () => {
+        const result = await runCli({ argumentsList: ["add", "unknown-kind", "example"] });
+        expect(result.code).toBe(1);
+        expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, saved: false });
+        expect(result.calls).toEqual([]);
+        expect(result.runtimeCalls).toEqual([]);
+    }, 20_000);
+
+    it.each(["db", "ssh", "s3"])("forwards add %s --help to the bundled kind", async kind => {
+        const result = await runCli({ argumentsList: ["add", kind, "--help"] });
+        expect(result.code).toBe(0);
+        expect(result.stdout).toContain(`Usage: akms-mcp add ${kind} <name>`);
+        expect(result.calls).toEqual([]);
+        expect(result.runtimeCalls).toEqual([]);
+    }, 20_000);
+
     it("opens Register without resolving or installing another MCP", async () => {
         const result = await runCli({ argumentsList: ["register"], input: "q\n" });
         expect(result.code).toBe(0);

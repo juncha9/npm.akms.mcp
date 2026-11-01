@@ -76,6 +76,30 @@ export async function launchMcp(options: LaunchOptions, dependencies: LaunchDepe
     return (dependencies.runChild ?? runChild)(launch.command, argumentsList, pendingInput);
 }
 
+const ADD_USAGE = "Usage: akms-mcp add <db|ssh|wsl|s3> <name> [options]. Run akms-mcp add <kind> --help for each kind's options.";
+
+/**
+ * Runs this launcher's own copy of the kind's `add`, never the installed runtime's: an older runtime
+ * has no `add`, ignores the word and starts its MCP server on these pipes.
+ */
+export async function launchAdd(argumentsList: string[], dependencies: Pick<LaunchDependencies, "bundledEntry" | "runChild" | "output"> = {}): Promise<number> {
+    const output = dependencies.output ?? process.stdout;
+    const kind = argumentsList[0];
+    if(kind === "--help" || kind === "-h") {
+        output.write(`${ADD_USAGE}\n`);
+        return 0;
+    }
+    let error: string | undefined;
+    if(kind == null || Object.hasOwn(MCP_PACKAGES, kind) == false) error = ADD_USAGE;
+    else if(kind === "wsl" && process.platform !== "win32") error = "WSL connections are added from Windows.";
+    if(error != null) {
+        output.write(`${JSON.stringify({ ok: false, saved: false, error }, null, 2)}\n`);
+        return 1;
+    }
+    const launch = (dependencies.bundledEntry ?? bundledEntry)(kind as McpId);
+    return (dependencies.runChild ?? runChild)(launch.command, [...launch.args, "add", ...argumentsList.slice(1)]);
+}
+
 async function runChild(command: string, argumentsList: string[], pendingInput?: string): Promise<number> {
     return new Promise<number>((resolve, reject) => {
         const interactiveInput = process.stdin.isTTY === true;

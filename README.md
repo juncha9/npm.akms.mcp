@@ -132,6 +132,28 @@ Each successful catalog-changing operation atomically keeps one pre-operation re
 
 To recover, close setup commands, preserve the current file if needed, then copy `registry.previous.json` over `registry.json`. Reopen setup, review **Sync** and reconnect clients. Restoring the catalog does not automatically restore client files. A session entry contains no connection credentials, so Import cannot reconstruct a missing catalog from that entry alone.
 
+## Add connections from the command line
+
+`akms-mcp add` saves a new connection without opening the menu, so scripts and AI agents with shell access can register one:
+
+```sh
+# A key file: no secret is involved
+akms-mcp add ssh web_01 --host 203.0.113.10 --user deploy --key ~/.ssh/id_ed25519
+
+# A password: typed at a hidden prompt, or read as one line from stdin
+akms-mcp add db app_ro --host db.example.com --database app --user app_ro --password --readonly
+```
+
+Run `akms-mcp add <db|ssh|wsl|s3> --help` for each kind's options. The command prints one JSON object and exits `0` only when the connection was saved, applied to every registered service and passed the startup check. A failure after saving reports `"saved": true` with what to do next.
+
+- **Secrets never go on the command line.** `--password` and the other secret options take no value. In a terminal they ask at a hidden prompt; otherwise they read one line per secret from stdin, in the order the options are given. An agent that does not have the password can hand you the same command to run in your own terminal.
+- **New names only.** An existing name is refused, so this command cannot change a saved connection's settings or permissions. Edit and remove connections in the menu.
+- **Listed options only.** Anything without an option stays in the menu, including SSH proxy commands, which run a local command on every connection.
+- **Writes are allowed by default**, as in the menu. Add `--readonly` for a read-only connection.
+- **Set up first.** Register at least one AI service and install the runtime; otherwise the command says which step is missing and saves nothing.
+
+Reconnect your AI clients afterwards: running servers keep the connections they loaded at startup.
+
 ## Terminal controls
 
 Use arrow keys and Enter to select; Esc goes back one level. Colors are disabled with `NO_COLOR` or when output is piped. Piped prompts use the same choices as numbered lists and accept a number, action key or label.

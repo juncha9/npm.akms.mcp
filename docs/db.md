@@ -14,6 +14,18 @@ Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Run
 
 In 0.3.x and earlier this server was distributed as `@akms/mcp-db` with an `akms-mcp-db` command. Version 0.4.0 uses `@akms/mcp` and the single `akms-mcp` command.
 
+## Add from the command line
+
+With 0.5.0 or later, after registering an AI service and installing the runtime, add a new database without the setup menu:
+
+```sh
+akms-mcp add db example_db --host db.example.com --database app --user app_user --password --readonly
+```
+
+`--password` reads a hidden terminal prompt, or one line on stdin; never put its value in an argument. Other secret flags work the same way, in option order. The driver defaults to PostgreSQL. Writes are allowed unless `--readonly` is given; `--no-ddl` separately disables CREATE, ALTER and DROP. Run `akms-mcp add db --help` for the allowed options. Use the setup menu for database URLs (`DB_URL`). Advanced settings such as timeouts and deny patterns are not exposed by `add`.
+
+The command accepts new names only and prints one JSON result. A saved connection can still report a failed startup check; read `saved`, `ok` and the exit code before reconnecting your AI client.
+
 ## Managed server entry
 
 Setup uses one grouped `akms_db` entry per AI client session. Setup writes a direct Node launch like this:

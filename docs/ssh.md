@@ -14,6 +14,18 @@ Use the main `akms-mcp` menu for Register and Sync, with import inside Sync. Run
 
 In 0.3.x and earlier this server was distributed as `@akms/mcp-ssh` with an `akms-mcp-ssh` command. Version 0.4.0 uses `@akms/mcp` and the single `akms-mcp` command.
 
+## Add from the command line
+
+With 0.5.0 or later, after registering an AI service and installing the runtime, add a new host without the setup menu:
+
+```sh
+akms-mcp add ssh example_host --host host.example.com --user deploy --password --readonly
+```
+
+`--password` reads a hidden terminal prompt, or one line on stdin; never put its value in an argument. Other secret flags work the same way, in option order. Writes are allowed unless `--readonly` is given. Run `akms-mcp add ssh --help` for the allowed options. Use the setup menu for proxy commands (`SSH_PROXY_COMMAND`) and separate jump-host credentials beyond the listed options. Advanced policy settings are not exposed by `add`.
+
+The command accepts new names only and prints one JSON result. A saved connection can still report a failed startup check; read `saved`, `ok` and the exit code before reconnecting your AI client.
+
 ## Managed server entry
 
 Setup uses one grouped `akms_ssh` entry per AI client session. Setup writes a direct Node launch like this:

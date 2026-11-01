@@ -2,14 +2,26 @@
 import { RegistryError } from "@/modules/registration/registry";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createS3CatalogServer, createS3McpServer } from "./server";
-import { ConfigError, SERVER_NAME, SERVER_VERSION } from "./profile";
+import { ConfigError, loadS3Profile, SERVER_NAME, SERVER_VERSION } from "./profile";
 import { runConfigCommand, runConnectionCheck } from "./modules/manage";
+import { runAddCommand } from "@/modules/registration/add-command";
+import { ADD_FIELDS } from "./modules/manage/add-fields";
+import { Prompter } from "./modules/manage/prompter";
 
 async function main() {
     const args = process.argv.slice(2);
+    if(args[0] === "add") {
+        process.exitCode = await runAddCommand({
+            kind: "s3", argv: args.slice(1), fields: ADD_FIELDS,
+            validate: loadS3Profile,
+            prompter: new Prompter(process.stdin, process.stderr), output: process.stdout,
+        });
+        return;
+    }
     if(args.length === 1 && ["--version", "-v"].includes(args[0])) { process.stderr.write(`${SERVER_VERSION}\n`); return; }
     if(args.length === 1 && ["--help", "-h"].includes(args[0])) {
         process.stderr.write("Catalog mode: node s3.js --catalog loads bucket connections from the shared registry.\n\n");
+        process.stderr.write("Add without the menu: node s3.js add <name> [opts]; add --help lists the options.\n\n");
         process.stderr.write("AKMS MCP S3 - one bucket per connection\n\nUsage:\n  node s3.js                          MCP stdio server\n  node s3.js config [--target ID]      Configure a connection (or npx -y @akms/mcp@latest s3)\n  node s3.js register                Register AI services\n  node s3.js sync                    Retry and review shared settings\n  node s3.js --check                  Read-only connection check\n  node s3.js --version\n\nTargets: claude-code, codex, claude-desktop, cursor\nConfiguration: S3_BUCKET, S3_BACKEND, S3_REGION, S3_AUTH.\nCompatible storage also requires S3_ENDPOINT and explicit S3_AUTH.\nRun config or see README for credentials, scope and transfer limits.\nCatalog: ~/.akms/mcp/registry.json (or $AKMS_MCP_HOME/registry.json) stores settings and passwords in plaintext.\n");
         return;
     }

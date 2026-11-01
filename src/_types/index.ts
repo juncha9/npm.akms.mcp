@@ -15,4 +15,6 @@ export interface CliArguments {
     mcpId?: McpId;
     targetId?: ClientId;
     managementMode?: "register" | "sync";
+    /** Everything after `add`, passed to the kind's entry untouched. */
+    addArguments?: string[];
 }

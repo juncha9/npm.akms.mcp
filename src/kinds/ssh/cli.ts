@@ -4,7 +4,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { LOG_LEVEL_ENV, SERVER_NAME, SERVER_VERSION, SHUTDOWN_DEADLINE_MS, SINGLE_HOST_ENV } from "@ssh/_defs";
 import { $logger } from "@ssh/_libs";
 import type { SshHostProfile } from "@ssh/_types";
+import { runAddCommand } from "@/modules/registration/add-command";
+import { loadHostProfile } from "@ssh/modules/config/host-profile";
 import { runConnectionCheck, runConfigCommand } from "@ssh/modules/manage";
+import { ADD_FIELDS } from "@ssh/modules/manage/add-fields";
+import { Prompter } from "@ssh/modules/manage/prompter";
 import { createSshCatalogServer, createSshMcpServer } from "@ssh/server";
 
 interface CliArguments {
@@ -73,6 +77,7 @@ const HELP_TEXT = [
     "  node ssh.js config [--target <client>]",
     "  node ssh.js register           Register AI services for all AKMS connections",
     "  node ssh.js sync               Review differences and retry pending changes",
+    "  node ssh.js add <name> [opts]  Save a new host without the menu; add --help lists the options",
     "  (lib/ssh.js of the installed @akms/mcp; the AKMS MCP menu: npx -y @akms/mcp@latest)",
     "",
     "Commands:",
@@ -144,6 +149,21 @@ async function main(): Promise<void> {
     if (process.argv[2] === "setup") {
         process.stderr.write("The setup command has been removed. Use npx -y @akms/mcp@latest ssh.\n");
         process.exitCode = 1;
+        return;
+    }
+
+    if (process.argv[2] === "add") {
+        if (process.env[LOG_LEVEL_ENV] == null) {
+            process.env[LOG_LEVEL_ENV] = "warn";
+        }
+        process.exitCode = await runAddCommand({
+            kind: "ssh",
+            argv: process.argv.slice(3),
+            fields: ADD_FIELDS,
+            validate: loadHostProfile,
+            prompter: new Prompter(process.stdin, process.stderr),
+            output: process.stdout,
+        });
         return;
     }
 

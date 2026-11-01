@@ -83,6 +83,8 @@ const validEntry = (value: unknown): value is McpServerEntry => record(value)
 
 export class RegistryError extends Error {}
 
+export const nameInUse = (name: string) => `The name ${name} is already in use, or still being removed from an AI service. Nothing was changed; choose another name, or open the setup menu (akms-mcp) to edit it or run Sync.`;
+
 export function entryHash(entry: McpServerEntry): string {
     return createHash("sha256").update(JSON.stringify([entry.command, entry.args, Object.entries(entry.env).sort(([a], [b]) => a.localeCompare(b))])).digest("hex");
 }
@@ -301,8 +303,10 @@ export class Registry {
         state.sessions[plan.kind] = { mode: plan.mode, entry: plan.entry, applied: state.sessions[plan.kind]?.applied ?? {} };
     }
 
-    async checkSaved(prompter: RegistrationPrompter, names: string[]): Promise<void> {
+    /** Returns false when a server failed its check, or could not be checked yet. */
+    async checkSaved(prompter: RegistrationPrompter, names: string[]): Promise<boolean> {
         const state = this.read();
+        let pending = false;
         const entries: { name: string; entry: McpServerEntry; prefixes?: string[]; maskEntries?: McpServerEntry[] }[] = [];
         const sessions = new Set<McpKind>();
         for(const name of new Set(names)) {
@@ -313,12 +317,12 @@ export class Registry {
         }
         for(const kind of sessions) {
             const entry = state.sessions?.[kind]?.entry;
-            if(!entry) { prompter.write(`Startup check pending for ${sessionName(kind)}: install its runtime from Runtime, then run Sync.\n`); continue; }
+            if(!entry) { prompter.write(`Startup check pending for ${sessionName(kind)}: install its runtime from Runtime, then run Sync.\n`); pending = true; continue; }
             entries.push({ name: sessionName(kind), entry,
                 prefixes: Object.entries(state.connections).filter(([, item]) => item.kind === kind && item.entry).map(([name]) => `${name}__`),
                 maskEntries: Object.values(state.connections).filter(item => item.kind === kind && item.entry).map(item => item.entry!) });
         }
-        await checkConnections(prompter, entries, this.runtimeOptions.check);
+        return await checkConnections(prompter, entries, this.runtimeOptions.check) && !pending;
     }
 
     /** Installs or updates @akms/mcp, which carries every kind; returns the given kind's launch. */
@@ -403,7 +407,7 @@ export class Registry {
         finally { this.backupCaptured = false; fs.closeSync(descriptor); fs.unlinkSync(lock); }
     }
 
-    private change(action: (state: RegistryState) => void, kinds?: McpKind[]): SyncResult[] {
+    private change(action: (state: RegistryState) => void, kinds?: McpKind[], onSaved?: () => void): SyncResult[] {
         return this.locked(() => {
             const state = this.read();
             action(state);
@@ -418,6 +422,7 @@ export class Registry {
             }
             // Persist desired state before touching any client: failures remain retryable.
             this.save(state);
+            onSaved?.();
             return this.reconcile(state, true, kinds);
         });
     }
@@ -482,6 +487,20 @@ export class Registry {
             }
             Object.defineProperty(state.connections, name, { value: { kind, entry, applied: previous?.applied ?? {} }, enumerable: true, configurable: true, writable: true });
         });
+    }
+
+    /**
+     * Saves a connection under a name that must not exist at all, not even as a pending deletion, checked under the lock.
+     * `onSaved` runs once the catalog holds it: clients are written and the catalog saved again afterwards, so a later step can throw with the connection already saved.
+     */
+    add(kind: McpKind, name: string, entry: McpServerEntry, onSaved: () => void): SyncResult[] {
+        this.validateName(kind, name);
+        if(!validEntry(entry) || entryKind(entry) !== kind || catalogLaunch(entry)) throw new RegistryError("Invalid connection name or MCP entry.");
+        return this.change((state) => {
+            if(!state.clients.length) throw new RegistryError("Register at least one AI service before saving a connection.");
+            if(own(state.connections, name)) throw new RegistryError(nameInUse(name));
+            Object.defineProperty(state.connections, name, { value: { kind, entry, applied: {} }, enumerable: true, configurable: true, writable: true });
+        }, undefined, onSaved);
     }
 
     remove(kind: McpKind, name: string, expected?: string | null): SyncResult[] {

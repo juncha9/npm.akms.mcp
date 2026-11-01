@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PACKAGE_VERSION } from "@/_defs";
 import { Registry } from "@/modules/registration/registry";
 import { runtimeMenu, runtimeNotice } from "@/modules/registration/runtime-menu";
 import { migrationStatus } from "@/modules/registration/migration-menu";
@@ -80,7 +81,7 @@ describe("Migrate registry inside Runtime", () => {
         expect(text).toContain("Migrate the registry and apply these changes? (y/N)");
     });
     it("hides the row after migrating", async () => {
-        const { registry, install } = fixture(); install("0.4.0");
+        const { registry, install } = fixture(); install(PACKAGE_VERSION);
         await screen(["migrate", "y", "b"], registry);
         expect(migrationStatus(registry).status).toBe("none");
         const text = await screen(["b"], registry);
@@ -89,10 +90,10 @@ describe("Migrate registry inside Runtime", () => {
         expect(text).toMatch(/2 {2}Migrate registry +done/);
         expect(text).toMatch(/3 {2}Remove old packages +next +then restart your AI clients/);
         expect(text).toContain("Remove old packages  step 3 · @akms/mcp-db");
-        expect(runtimeNotice(registry)).toEqual({ hint: "@akms/mcp 0.4.0" });
+        expect(runtimeNotice(registry)).toEqual({ hint: `@akms/mcp ${PACKAGE_VERSION}` });
     });
     it("hides the row and names the reason when a connection blocks the format upgrade", async () => {
-        const { registry, install } = fixture(); install("0.4.0");
+        const { registry, install } = fixture(); install(PACKAGE_VERSION);
         fs.writeFileSync(registry.file, JSON.stringify({ version: 1, clients: ["cursor"], connections: { ["x".repeat(36)]: { kind: "db", entry: { command: "akms-mcp-db", args: [], env: {} }, applied: {} } } }));
         expect(migrationStatus(registry).status).toBe("blocked");
         const text = await screen(["b"], registry);
